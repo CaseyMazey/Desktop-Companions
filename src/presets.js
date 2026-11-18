@@ -76,7 +76,7 @@ const SPECIES = {
   cat: { label: 'Mauz (Katze)', color: '#f4a261' },
   ghost: { label: 'Buh (Geist)', color: '#c4b5fd' },
   bird: { label: 'Piep (Vogel)', color: '#7cc6f2' },
-  beau: { label: 'Beau (Kater mit Hexenhut)', color: '#d99a36' }, // Farbe = Schmetterling; der Hut bleibt immer orange-golden
+  beau: { label: 'Beau (Kater mit Hexenhut)', color: '#d99a36' }, // Fell und Hut sind immer gleich (der Hut bleibt orange-golden)
 };
 
 // Beau: eigenes Pet, gehoert zum Beau-Theme von Nook
@@ -86,7 +86,6 @@ const BEAU = {
   kind: 'nook',
   messages: [
     'Miau. Der Hut sitzt. ✨',
-    'Ich hab einen Schmetterling gesehen! 🦋',
     'Du machst das gut. Wirklich. 🌙',
     'Kleine Pause? Ich halte so lange die Stellung. 🎩',
     'Trink mal einen Schluck Wasser 💧',

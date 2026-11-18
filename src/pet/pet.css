@@ -70,19 +70,11 @@ body:has(#bubble.show) #name { opacity: 0 !important; }
 /* ---------- Beau (schwarzer Kater mit Hexenhut) ---------- */
 .fur { fill: #2a2433; stroke: #5b4f6e; stroke-width: 2.5; stroke-linejoin: round; }
 .sp-beau .tail { transform-origin: right bottom; }
-.wing { fill: var(--c); }   /* Schmetterling in der waehlbaren Farbe (kein Inline-Style: CSP) */
 .sp-beau .wave { display: none; transform-box: fill-box; transform-origin: 0% 100%; }
 .happy .sp-beau .wave, .alert .sp-beau .wave { display: inline; animation: beau-wave .3s ease-in-out infinite alternate; }
 .happy .sp-beau .paw-r, .alert .sp-beau .paw-r { display: none; }
 #pet.happy:has(.sp-beau) #sprite { animation: none; }   /* Beau winkt statt zu huepfen */
-.sp-beau .butterfly { transform-box: fill-box; animation: beau-flutter 7s ease-in-out infinite; }
-.sp-beau .flap { transform-box: fill-box; transform-origin: center; animation: beau-flap .28s ease-in-out infinite; }
-.sleep .sp-beau .butterfly { animation: none; transform: translate(-8px, 22px); }  /* landet auf der Hutkrempe */
-.sleep .sp-beau .flap { animation-duration: 2.4s; }
 @keyframes beau-wave { from { transform: rotate(-10deg); } to { transform: rotate(12deg); } }
-@keyframes beau-flutter { 0%, 100% { transform: translate(0, 0); } 20% { transform: translate(-14px, 6px); } 45% { transform: translate(-6px, -5px); }
-  70% { transform: translate(5px, 5px); } 85% { transform: translate(3px, -3px); } }
-@keyframes beau-flap { 0%, 100% { transform: scaleX(1); } 50% { transform: scaleX(.35); } }
 
 /* Zzz beim Schlafen */
 #zzz { position: absolute; right: 2%; top: 4%; display: none; color: #a5b4fc; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,.4); pointer-events: none; }

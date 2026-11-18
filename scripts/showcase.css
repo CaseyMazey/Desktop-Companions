@@ -10,4 +10,4 @@ html, body { background: linear-gradient(160deg, #e9e4ff 0%, #fdf2e9 60%, #e6f7e
 .pet .say::after { content: ""; position: absolute; left: 50%; bottom: -7px; width: 14px; height: 14px; background: inherit; transform: translateX(-50%) rotate(45deg); border-radius: 0 0 3px 0; }
 .taskbar { position: absolute; left: 0; right: 0; bottom: 0; height: 40px; background: rgba(32, 30, 44, .88); }
 .pet.idle #sprite, .pet .sprite { animation: none; }
-.pet .flap, .pet .butterfly, .pet .wave { animation: none !important; }
+.pet .wave { animation: none !important; }

@@ -39,7 +39,6 @@ header { display: flex; align-items: center; gap: 16px; margin-bottom: 14px; }
 .stripe { stroke: var(--c-dark); }
 .fur { fill: #2a2433; stroke: #5b4f6e; stroke-width: 2.5; stroke-linejoin: round; }
 .wave { display: none; }
-.wing { fill: var(--c); }
 .cheek { fill: #fb7185; opacity: .45; }
 .eyes-closed, .eyes-happy, .mouth, .beak-open { display: none; }
 .mouth-idle { display: inline; }

@@ -88,7 +88,7 @@ Beim ersten Start legt Pets für jede gefundene App (NEXUS, DAN, Nook) ein eigen
 | **NEXUS** | meldet, wenn ein Auftrag in 3C fertig ist, schiefging oder Claude eine Entscheidung braucht |
 | **DAN** | erinnert Mo–Fr stündlich (7:30–16:30) daran aufzuschreiben, was du gerade machst; um 15:45 die Feierabend-Erinnerung |
 | **Nook** | sagt alle 45 Minuten etwas Nettes oder erinnert an Pausen und Wasser; um 12:30 Mittagspause |
-| **Beau** 🎩 | schwarzer Kater mit Hexenhut aus dem Beau-Theme von Nook: begrüßt dich beim Start und winkt, sein Schmetterling flattert mit (Tray → Neues Pet → Beau) |
+| **Beau** 🎩 | schwarzer Kater mit Hexenhut aus dem Beau-Theme von Nook: begrüßt dich beim Start und winkt (Tray → Neues Pet → Beau) |
 | **Eigene App** | öffnet ein beliebiges Programm, eine Datei oder eine `https://`-Adresse |
 
 Alles lässt sich pro Pet in den Einstellungen ändern: Tier (Geist, Katze, Schleim, Vogel oder Beau, der schwarze Kater mit Hexenhut), Farbe, Größe, Sprüche, Abstand, Uhrzeiten und ob es herumläuft.

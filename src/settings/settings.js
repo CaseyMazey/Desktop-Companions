@@ -82,6 +82,7 @@ function renderEditor() {
   $('r-messages').value = r.messages.join('\n');
   $('r-timed').value = r.timed.map((t) => `${t.time} ${t.text}`).join('\n');
   drawPet($('preview'), p);
+  $('f-color').closest('label').hidden = p.species === 'beau'; // Beau: Fell und Hut sind fest
 
   main.querySelectorAll('input, select, textarea').forEach((el) => {
     if (el.id === 'f-kind') return;
@@ -128,7 +129,11 @@ function collect() {
 
 function scheduleSave() {
   const p = pet();
-  if (p) { const c = collect(); drawPet($('preview'), { ...p, species: c.species, color: c.color }); }
+  if (p) {
+    const c = collect();
+    drawPet($('preview'), { ...p, species: c.species, color: c.color });
+    $('f-color').closest('label').hidden = c.species === 'beau';
+  }
   clearTimeout(saveTimer);
   saveTimer = setTimeout(flush, 350);
 }

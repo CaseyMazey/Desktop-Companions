@@ -57,7 +57,6 @@
   // ---------- Beau: kleiner schwarzer Kater mit Hexenhut (Nook-Beau-Theme) ----------
   // Gleicher Stil wie alle Pets (runde Formen, 2.5er Linie, Baeckchen). Regeln aus MIND: Hut (orange-golden,
   // geschwungene Spitze, schwarzes Band, goldene Schnalle) ist IMMER auf; genau 4 Beine und 2 Ohren.
-  // Die waehlbare Farbe faerbt den Schmetterling, Fell und Hut bleiben immer gleich.
   const INK = '#e9e2f3';       // helle Linien fuer Mund und Schnurrhaare auf schwarzem Fell
   const GOLD = '#f6b91d';
   const beauEyes = (lx, rx, y) => `
@@ -103,14 +102,7 @@
         <ellipse class="fur" cx="103" cy="63" rx="8" ry="7"/>
         <ellipse cx="103" cy="65" rx="3.2" ry="2.4" fill="#f9a8d4"/>
         <circle cx="99" cy="60" r="1.6" fill="#f9a8d4"/><circle cx="103" cy="58.5" r="1.6" fill="#f9a8d4"/><circle cx="107" cy="60" r="1.6" fill="#f9a8d4"/>
-      </g>
-      <g class="butterfly"><g class="flap">
-        <ellipse cx="96" cy="14" rx="6" ry="5" class="wing" stroke="#7a4a0e" stroke-width="1.5" transform="rotate(-20 96 14)"/>
-        <ellipse cx="108" cy="14" rx="6" ry="5" class="wing" stroke="#7a4a0e" stroke-width="1.5" transform="rotate(20 108 14)"/>
-        <ellipse cx="98" cy="22" rx="4" ry="3.4" class="wing" stroke="#7a4a0e" stroke-width="1.5"/>
-        <ellipse cx="106" cy="22" rx="4" ry="3.4" class="wing" stroke="#7a4a0e" stroke-width="1.5"/>
-        <path d="M102 11 v14 M102 11 q-2 -5 -5 -6 M102 11 q2 -5 5 -6" stroke="#3a2a14" stroke-width="1.6" fill="none" stroke-linecap="round"/>
-      </g></g>`;
+      </g>`;
 
   window.renderSpecies = (species) => `<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" class="sp-${species}">${(SPECIES[species] || SPECIES.blob)()}</svg>`;
 })();
