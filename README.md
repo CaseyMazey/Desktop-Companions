@@ -21,7 +21,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/pets.png" alt="Vier Pets über der Taskleiste: ein Geist meldet einen fertigen Auftrag in NEXUS, eine Katze erinnert an DAN, ein Schleim sagt etwas Nettes, ein Vogel ist einfach da" width="900">
+  <img src="docs/screenshots/pets.png" alt="Fünf Pets über der Taskleiste: ein Geist meldet einen fertigen Auftrag in NEXUS, eine Katze erinnert an DAN, ein Schleim sagt etwas Nettes, Beau winkt mit Hexenhut, ein Vogel ist einfach da" width="900">
 </p>
 
 Du vergisst beim Arbeiten, deinen Ausbildungsnachweis zu schreiben, Wasser zu trinken oder nachzusehen, ob Claude schon fertig ist? **Pets sitzen unten auf deinem Bildschirm und sagen dir Bescheid.**
@@ -88,9 +88,10 @@ Beim ersten Start legt Pets für jede gefundene App (NEXUS, DAN, Nook) ein eigen
 | **NEXUS** | meldet, wenn ein Auftrag in 3C fertig ist, schiefging oder Claude eine Entscheidung braucht |
 | **DAN** | erinnert Mo–Fr stündlich (7:30–16:30) daran aufzuschreiben, was du gerade machst; um 15:45 die Feierabend-Erinnerung |
 | **Nook** | sagt alle 45 Minuten etwas Nettes oder erinnert an Pausen und Wasser; um 12:30 Mittagspause |
+| **Beau** 🎩 | schwarzer Kater mit Hexenhut aus dem Beau-Theme von Nook: begrüßt dich beim Start und winkt, sein Schmetterling flattert mit (Tray → Neues Pet → Beau) |
 | **Eigene App** | öffnet ein beliebiges Programm, eine Datei oder eine `https://`-Adresse |
 
-Alles lässt sich pro Pet in den Einstellungen ändern: Tier (Geist, Katze, Schleim, Vogel), Farbe, Größe, Sprüche, Abstand, Uhrzeiten und ob es herumläuft.
+Alles lässt sich pro Pet in den Einstellungen ändern: Tier (Geist, Katze, Schleim, Vogel oder Beau, der schwarze Kater mit Hexenhut), Farbe, Größe, Sprüche, Abstand, Uhrzeiten und ob es herumläuft.
 
 ## Für Entwickler
 

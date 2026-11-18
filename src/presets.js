@@ -76,9 +76,30 @@ const SPECIES = {
   cat: { label: 'Mauz (Katze)', color: '#f4a261' },
   ghost: { label: 'Buh (Geist)', color: '#c4b5fd' },
   bird: { label: 'Piep (Vogel)', color: '#7cc6f2' },
+  beau: { label: 'Beau (Kater mit Hexenhut)', color: '#d99a36' }, // Farbe = Schmetterling; der Hut bleibt immer orange-golden
+};
+
+// Beau: eigenes Pet, gehoert zum Beau-Theme von Nook
+const BEAU = {
+  name: 'Beau',
+  species: 'beau',
+  kind: 'nook',
+  messages: [
+    'Miau. Der Hut sitzt. ✨',
+    'Ich hab einen Schmetterling gesehen! 🦋',
+    'Du machst das gut. Wirklich. 🌙',
+    'Kleine Pause? Ich halte so lange die Stellung. 🎩',
+    'Trink mal einen Schluck Wasser 💧',
+    'Schultern runter, tief durchatmen. Ich schnurre mit.',
+    '*streckt sich* Mach du das auch mal kurz!',
+    'Ein Kapitel nach dem anderen. 📖',
+    'Ich bin stolz auf dich. Mrrp.',
+    'Du darfst Pausen machen, bevor du müde bist.',
+  ],
+  greetings: { morgen: 'Guten Morgen! ☀️ *winkt*', tag: 'Hallo! Schön, dass du da bist. *winkt*', abend: 'Guten Abend! 🕯️ *winkt*', nacht: 'Noch wach? 🌙 *winkt leise*' },
 };
 
 const NAMES = { nexus: 'Nexi', dan: 'Danny', nook: 'Nooki', custom: 'Pip', none: 'Momo' };
 const DEFAULT_SPECIES = { nexus: 'ghost', dan: 'cat', nook: 'blob', custom: 'bird', none: 'blob' };
 
-module.exports = { APPS, SPECIES, NAMES, DEFAULT_SPECIES };
+module.exports = { APPS, SPECIES, NAMES, DEFAULT_SPECIES, BEAU };

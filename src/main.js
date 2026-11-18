@@ -5,7 +5,7 @@ const path = require('node:path');
 const fs = require('node:fs');
 const os = require('node:os');
 const http = require('node:http');
-const { APPS, SPECIES } = require('./presets');
+const { APPS, SPECIES, BEAU } = require('./presets');
 const { createPet, normalizePet, normalizeState, dueReminder, pickMessage, neighborPairs, chatterDelay, freeSpot, KINDS } = require('./logic');
 const { pickDialogue } = require('./dialogues');
 const { startBridge, PORT } = require('./bridge');
@@ -356,13 +356,23 @@ function onAppEvent(ev) {
 }
 
 // ---------- Pets verwalten ----------
+// Beau: Kater mit Hexenhut, verbunden mit Nook, eigene Sprueche
+const beauExtra = () => {
+  const base = createPet(BEAU.kind);
+  return { name: BEAU.name, species: BEAU.species, reminders: { ...base.reminders, messages: BEAU.messages } };
+};
+function beauGreeting() {
+  const h = new Date().getHours();
+  return BEAU.greetings[h < 5 ? 'nacht' : h < 11 ? 'morgen' : h < 18 ? 'tag' : h < 23 ? 'abend' : 'nacht'];
+}
 function addPet(kind, extra) {
+  if (kind === 'beau') { kind = BEAU.kind; extra = { ...beauExtra(), ...extra }; }
   const pet = createPet(kind, extra);
   state.pets.push(pet);
   createPetWindow(pet);
   save();
   updateTray();
-  setTimeout(() => say(pet.id, `Hallo, ich bin ${pet.name}! 👋`, { mood: 'happy' }), 900);
+  setTimeout(() => say(pet.id, pet.species === 'beau' ? 'Mrrp! Ich bin Beau. 🎩 *winkt*' : `Hallo, ich bin ${pet.name}! 👋`, { mood: 'happy' }), 900);
   return pet;
 }
 function removePet(id) {
@@ -414,7 +424,7 @@ ipcMain.handle('settings:save-pet', (_e, data) => {
   updateTray();
   return pet;
 });
-ipcMain.handle('settings:add-pet', (_e, kind) => addPet(KINDS.includes(kind) ? kind : 'none'));
+ipcMain.handle('settings:add-pet', (_e, kind) => addPet(KINDS.includes(kind) || kind === 'beau' ? kind : 'none'));
 ipcMain.handle('settings:remove-pet', (_e, id) => { removePet(id); return true; });
 ipcMain.handle('settings:test-pet', (_e, id) => { const p = petById(id); if (p) speakNow(p); });
 ipcMain.handle('settings:open-app', (_e, id) => { const p = petById(id); if (p) openApp(p); });
@@ -440,7 +450,11 @@ function updateTray() {
   if (!tray) return;
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: hidden ? 'Pets zeigen' : 'Pets verstecken', click: toggleHidden },
-    { label: 'Neues Pet', submenu: KINDS.map((k) => ({ label: k === 'none' ? 'Ohne App' : `Verbunden mit ${APPS[k].label}`, click: () => addPet(k) })) },
+    { label: 'Neues Pet', submenu: [
+      ...KINDS.map((k) => ({ label: k === 'none' ? 'Ohne App' : `Verbunden mit ${APPS[k].label}`, click: () => addPet(k) })),
+      { type: 'separator' },
+      { label: 'Beau 🎩 (mit Nook)', click: () => addPet('beau') },
+    ] },
     { label: 'Plaudern lassen', enabled: state.pets.length > 1, click: () => maybeChat(true) },
     { label: 'Einstellungen …', click: () => openSettings() },
     { type: 'separator' },
@@ -470,6 +484,8 @@ app.whenReady().then(() => {
   }
   for (const pet of state.pets) createPetWindow(pet);
   if (!SMOKE) setTimeout(() => state.pets.forEach((p) => makeRoom(p)), 1500);
+  // Beau begruesst dich beim Start und hebt die Pfote (Wunsch aus dem Beau-Theme)
+  if (!SMOKE) setTimeout(() => state.pets.filter((p) => p.species === 'beau' && !p.muted).forEach((p) => say(p.id, beauGreeting(), { mood: 'happy', ms: 6000 })), 2500);
   tray = new Tray(icon);
   tray.setToolTip('Pets');
   tray.on('click', () => openSettings());
@@ -486,6 +502,7 @@ app.whenReady().then(() => {
 async function runSmoke() {
   const out = process.env.PETS_SMOKE_OUT || app.getPath('userData');
   fs.mkdirSync(out, { recursive: true });
+  addPet('beau');
   const report = { pets: state.pets.map((p) => `${p.name}/${p.kind}/${p.species}`) };
   // zwei Pets nebeneinander, das dritte weit weg
   const a = screen.getPrimaryDisplay().workArea;
