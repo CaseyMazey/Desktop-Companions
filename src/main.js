@@ -99,7 +99,7 @@ function createPetWindow(pet) {
   win.loadFile(path.join(__dirname, 'pet', 'pet.html'), { query: { id: pet.id } });
   win.webContents.on('did-finish-load', () => { const p = petById(pet.id); if (p) win.webContents.send('pet:update', publicPet(p)); });
   // bei Skalierung (125 %, 150 %) legt Windows das Fenster schon ein paar Pixel zu gross an: einmal richtig setzen
-  win.once('ready-to-show', () => { placeWin(pet.id, pet.x, pet.y); if (!hidden) win.showInactive(); });
+  win.once('ready-to-show', () => { placeWin(pet.id, pet.x, pet.y); if (!hidden && !pet.hidden) win.showInactive(); });
   win.webContents.on('will-navigate', (e) => e.preventDefault());
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   const entry = { win, mem: {}, busyUntil: 0, dragging: null, walking: null, inTalk: false, pos: { x: pet.x, y: pet.y }, capturing: false };
@@ -207,6 +207,7 @@ ipcMain.on('pet:context', (ev) => {
     { type: 'separator' },
     ...(pet.target ? [{ label: `${APPS[pet.kind].label === 'Keine' ? 'App' : APPS[pet.kind].label} öffnen`, click: () => openApp(pet) }] : []),
     { label: 'Sag was!', click: () => speakNow(pet) },
+    { label: 'Ausblenden (in den Einstellungen wieder einblenden)', click: () => setPetHidden(pet.id, true) },
     { label: pet.muted ? 'Aufwecken' : 'Schlafen legen (keine Erinnerungen)', click: () => { pet.muted = !pet.muted; save(); refreshPet(pet); if (!pet.muted) say(pet.id, 'Bin wieder wach! ☀️', { mood: 'happy' }); } },
     { label: 'Frei herumwandern', type: 'checkbox', checked: pet.wander, click: () => { pet.wander = !pet.wander; if (!pet.wander) pet.homeX = posOf(pet.id)[0]; save(); updateTray(); sendSettings(); } },
     { type: 'separator' },
@@ -235,7 +236,7 @@ function othersOf(id) {
   const out = [];
   for (const p of state.pets) {
     const e = live.get(p.id);
-    if (p.id === id || !e || e.dragging || e.win.isDestroyed()) continue;
+    if (p.id === id || p.hidden || !e || e.dragging || e.win.isDestroyed()) continue;
     const [x, y] = posOf(p.id);
     out.push({ cx: (e.walkTarget ?? x) + W / 2, bottom: y + winHeight(p), size: p.size });
   }
@@ -296,7 +297,7 @@ function maybeWander() {
   if (hidden) return;
   for (const pet of state.pets) {
     const e = live.get(pet.id);
-    if (!e || e.dragging || e.walking || e.inTalk) continue;
+    if (!e || pet.hidden || e.dragging || e.walking || e.inTalk) continue;
     if (pet.muted || Date.now() < e.busyUntil || Math.random() > (pet.wander ? 0.18 : 0.14)) { makeRoom(pet); continue; }
     const [x, y] = posOf(pet.id);
     const [min, max] = xRange(pet, x, y);
@@ -343,7 +344,7 @@ function maybeChat(force = false) {
   const bounds = [];
   for (const pet of state.pets) {
     const e = live.get(pet.id);
-    if (!e || pet.muted || e.dragging || Date.now() < e.busyUntil) continue;
+    if (!e || pet.muted || pet.hidden || e.dragging || Date.now() < e.busyUntil) continue;
     const [x, y] = posOf(pet.id);
     const h = winHeight(pet);
     bounds.push({ id: pet.id, x, y: y + BUBBLE_H, width: W, height: h - BUBBLE_H });
@@ -369,7 +370,7 @@ function checkReminders() {
   const now = new Date();
   for (const pet of state.pets) {
     const e = live.get(pet.id);
-    if (!e) continue;
+    if (!e || pet.hidden) continue;
     const text = e.mem.pending || dueReminder(pet, e.mem, now);
     if (!text) continue;
     if (e.inTalk || e.dragging || Date.now() < e.busyUntil) { e.mem.pending = text; continue; } // gleich danach
@@ -380,7 +381,7 @@ function checkReminders() {
 
 // ---------- Meldungen anderer Apps ----------
 function onAppEvent(ev) {
-  const targets = state.pets.filter((p) => p.events && (ev.pet ? p.id === ev.pet : p.kind === ev.app));
+  const targets = state.pets.filter((p) => p.events && !p.hidden && (ev.pet ? p.id === ev.pet : p.kind === ev.app));
   const where = ev.project ? ` (${ev.project})` : '';
   for (const pet of targets) {
     if (ev.type === 'task-done') say(pet.id, `✅ Fertig in 3C${where}! Klick mich zum Ansehen.`, { mood: 'happy', open: true, ms: 20000 });
@@ -552,9 +553,26 @@ function setAllWander(on) {
   updateTray();
   sendSettings();
 }
+// Ein einzelnes Pet aus- oder einblenden, ohne es zu entfernen (Auge in der Liste der Einstellungen)
+function setPetHidden(id, on) {
+  const pet = petById(id);
+  const e = live.get(id);
+  if (!pet) return null;
+  pet.hidden = !!on;
+  if (e) {
+    stopWalk(id);
+    if (pet.hidden) { e.win.hide(); e.capturing = false; }
+    else if (!hidden) { e.win.showInactive(); setTimeout(() => say(id, 'Da bin ich wieder! 👋', { mood: 'happy', ms: 3500 }), 300); }
+  }
+  save();
+  updateTray();
+  sendSettings();
+  return pet;
+}
+ipcMain.handle('settings:set-hidden', (_e, id, on) => setPetHidden(id, on));
 function toggleHidden() {
   hidden = !hidden;
-  for (const e of live.values()) hidden ? e.win.hide() : e.win.showInactive();
+  for (const [id, e] of live) (hidden || petById(id)?.hidden) ? e.win.hide() : e.win.showInactive();
   updateTray();
 }
 

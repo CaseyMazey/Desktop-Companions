@@ -46,9 +46,10 @@ function normalizePet(p) {
     color: HEX.test(p.color) ? p.color : SPECIES[species].color,
     target: str(p.target, 1000).trim(),
     size: num(p.size, 70, 160, 100),
-    wander: typeof p.wander === 'boolean' ? p.wander : true,
+    wander: typeof p.wander === 'boolean' ? p.wander : false, // Standard: bleibt an seinem Platz (2026-11-18)
     events: typeof p.events === 'boolean' ? p.events : APPS[kind].events,
     muted: !!p.muted,
+    hidden: !!p.hidden, // auf dem Desktop ausgeblendet (Auge in der Liste), Einstellungen bleiben
     x: Number.isFinite(p.x) ? Math.round(p.x) : null,
     y: Number.isFinite(p.y) ? Math.round(p.y) : null,
     homeX: Number.isFinite(p.homeX) ? Math.round(p.homeX) : null, // wo es abgesetzt wurde (fuer "nicht frei wandern")
@@ -62,9 +63,12 @@ function normalizeState(s) {
   const seen = new Set();
   for (const p of pets) { while (seen.has(p.id)) p.id = newId(); seen.add(p.id); }
   const g = s.settings && typeof s.settings === 'object' ? s.settings : {};
+  // Einmalig (2026-11-18): bisher wanderten alle Pets standardmaessig frei – jetzt bleiben sie an ihrem Platz
+  if (g.stayDefault !== true) for (const p of pets) { p.wander = false; if (p.homeX == null) p.homeX = p.x; }
   return {
     pets,
     settings: {
+      stayDefault: true,
       chatter: ['aus', 'selten', 'normal', 'oft'].includes(g.chatter) ? g.chatter : 'normal',
       autostart: !!g.autostart,
       autoUpdate: g.autoUpdate !== false,

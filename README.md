@@ -76,10 +76,11 @@ Unter Linux gehen Klicks direkt neben dem Pet nicht zum Fenster dahinter durch (
 | **Klick aufs Pet** | öffnet die verbundene App |
 | **Klick auf die Sprechblase** | öffnet die App (z. B. DAN, um gleich aufzuschreiben) |
 | **Ziehen** | verschiebt das Pet; auf einem anderen abgesetzt, rutscht es zur Seite |
-| **Rechtsklick** | Menü: Sag was, Schlafen legen, Herumlaufen, Einstellungen, Entfernen |
+| **Rechtsklick** | Menü: Sag was, Ausblenden, Schlafen legen, Frei herumwandern, Einstellungen, Entfernen |
+| **Auge in den Einstellungen** | blendet ein Pet auf dem Desktop aus und wieder ein – ohne es zu entfernen |
 | **Tray-Symbol** | neues Pet, Einstellungen, Pets verstecken, Beenden |
 
-Beim ersten Start legt Desktop Companions für jede gefundene App (NEXUS, DAN, Nook) ein eigenes Pet an.
+Beim ersten Start legt Desktop Companions für jede gefundene App (NEXUS, DAN, Nook) ein eigenes Pet an. Pets bleiben standardmäßig an ihrem Platz und tapsen dort nur ein bisschen herum; „Frei herumwandern“ lässt sie über die ganze Bildschirmkante laufen.
 
 ## Voreinstellungen
 

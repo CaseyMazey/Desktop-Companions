@@ -24,6 +24,9 @@ function drawPet(el, p) {
   el.style.setProperty('--c-dark', darker(p.color));
 }
 
+const EYE_ON = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+const EYE_OFF = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.9 17.9A10.4 10.4 0 0 1 12 19c-6.4 0-10-7-10-7a18.5 18.5 0 0 1 5.1-5.9M9.9 5.2A9.7 9.7 0 0 1 12 5c6.4 0 10 7 10 7a18.6 18.6 0 0 1-2.2 3.2M14.1 14.1a3 3 0 1 1-4.2-4.2"/><line x1="2" y1="2" x2="22" y2="22"/></svg>';
+
 function renderList() {
   const ul = $('list');
   ul.replaceChildren();
@@ -37,9 +40,24 @@ function renderList() {
     const meta = document.createElement('div');
     meta.className = 'meta';
     const b = document.createElement('strong'); b.textContent = p.name;
-    const s = document.createElement('small'); s.textContent = (p.kind === 'none' ? 'ohne App' : `mit ${data.apps[p.kind].label}`) + (p.muted ? ' · schläft' : '');
+    const s = document.createElement('small'); s.textContent = (p.kind === 'none' ? 'ohne App' : `mit ${data.apps[p.kind].label}`) + (p.hidden ? ' · ausgeblendet' : p.muted ? ' · schläft' : '');
     meta.append(b, s);
-    li.append(mini, meta);
+    // Auge: auf dem Desktop aus- und einblenden, ohne das Pet zu entfernen
+    const eye = document.createElement('button');
+    eye.className = 'eye-btn';
+    eye.type = 'button';
+    eye.title = p.hidden ? 'Auf dem Desktop einblenden' : 'Auf dem Desktop ausblenden';
+    eye.setAttribute('aria-label', `${p.name} ${p.hidden ? 'einblenden' : 'ausblenden'}`);
+    eye.setAttribute('aria-pressed', String(!p.hidden));
+    eye.innerHTML = p.hidden ? EYE_OFF : EYE_ON;
+    eye.onclick = async (ev) => {
+      ev.stopPropagation();
+      const saved = await api.setHidden(p.id, !p.hidden);
+      if (saved) { data.state.pets[data.state.pets.findIndex((x) => x.id === saved.id)] = saved; renderList(); }
+    };
+    eye.onkeydown = (ev) => ev.stopPropagation();
+    li.classList.toggle('is-hidden', p.hidden);
+    li.append(mini, meta, eye);
     li.onclick = () => select(p.id);
     li.onkeydown = (e) => { if (e.key === 'Enter') select(p.id); };
     ul.appendChild(li);

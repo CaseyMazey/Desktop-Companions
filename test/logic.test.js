@@ -118,6 +118,17 @@ test('Gruppen: Pets, die ueber Nachbarn verbunden sind, links nach rechts', () =
   assert.deepEqual(neighborGroups([b('allein', 0)]), []);
 });
 
+test('Standard: Pets wandern nicht; alte Daten werden einmalig umgestellt, danach bleibt die Wahl', () => {
+  assert.equal(createPet('nook').wander, false);
+  const alt = normalizeState({ pets: [{ id: 'aaaa1111', kind: 'nook', wander: true, x: 300, y: 500 }], settings: {} });
+  assert.equal(alt.pets[0].wander, false);
+  assert.equal(alt.pets[0].homeX, 300);
+  assert.equal(alt.settings.stayDefault, true);
+  // spaeter bewusst eingeschaltet: bleibt an
+  alt.pets[0].wander = true;
+  assert.equal(normalizeState(alt).pets[0].wander, true);
+});
+
 test('Wandern aus: bleibt in der Naehe seines Platzes', () => {
   const pet = { wander: false, homeX: 500 };
   for (let k = 0; k < 200; k++) {

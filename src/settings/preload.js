@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld('pets', {
   savePet: (p) => ipcRenderer.invoke('settings:save-pet', p),
   addPet: (kind) => ipcRenderer.invoke('settings:add-pet', kind),
   removePet: (id) => ipcRenderer.invoke('settings:remove-pet', id),
+  setHidden: (id, on) => ipcRenderer.invoke('settings:set-hidden', id, on),
   testPet: (id) => ipcRenderer.invoke('settings:test-pet', id),
   openApp: (id) => ipcRenderer.invoke('settings:open-app', id),
   chatNow: () => ipcRenderer.invoke('settings:chat-now'),
