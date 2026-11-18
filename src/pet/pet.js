@@ -121,7 +121,8 @@ petEl.addEventListener('contextmenu', (e) => { e.preventDefault(); api.context()
 // ---------- Nachrichten vom Hauptprozess ----------
 api.on('pet:update', applyPet);
 api.on('pet:say', showBubble);
-api.on('pet:mood', (m) => flash(m, 1600));
+// Stimmung kurz zeigen: 'happy' oder { mood: 'sleep', ms: 3500 } (Aktionen in Szenen)
+api.on('pet:mood', (m) => (typeof m === 'object' ? flash(m.mood, m.ms || 1600) : flash(m, 1600)));
 api.on('pet:walk', (dir) => {
   walking = dir;
   if (dir) flip.classList.toggle('left', dir < 0);

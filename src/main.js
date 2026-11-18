@@ -6,8 +6,8 @@ const fs = require('node:fs');
 const os = require('node:os');
 const http = require('node:http');
 const { APPS, SPECIES, BEAU } = require('./presets');
-const { createPet, normalizePet, normalizeState, dueReminder, pickMessage, neighborPairs, chatterDelay, freeSpot, KINDS } = require('./logic');
-const { pickDialogue } = require('./dialogues');
+const { createPet, normalizePet, normalizeState, dueReminder, pickMessage, neighborGroups, strollTarget, chatterDelay, freeSpot, KINDS } = require('./logic');
+const { pickScene } = require('./dialogues');
 const { startBridge, PORT } = require('./bridge');
 const { Updater } = require('./updater');
 
@@ -30,8 +30,8 @@ let settingsWin = null;
 let hidden = false;
 let talking = false;                            // laeuft gerade ein Gespraech?
 const live = new Map();                         // id -> { win, mem, busyUntil, dragging, walking, inTalk }
-const pairNext = new Map();                     // "idA|idB" -> Zeitpunkt des naechsten Gespraechs
-const recentDialogues = [];
+const groupNext = new Map();                    // Gruppe ("idA|idB|…") -> Zeitpunkt der naechsten Szene
+const recentScenes = [];
 const log = (...a) => console.log(...a);
 
 // ---------- Speichern ----------
@@ -83,6 +83,7 @@ function defaultPos(pet) {
 
 function createPetWindow(pet) {
   if (pet.x == null || pet.y == null) Object.assign(pet, defaultPos(pet));
+  if (pet.homeX == null) pet.homeX = pet.x;
   Object.assign(pet, clampToScreen(pet, pet.x, pet.y));
   const win = new BrowserWindow({
     x: pet.x, y: pet.y, width: W, height: winHeight(pet),
@@ -174,6 +175,7 @@ ipcMain.on('pet:drag-end', (ev) => {
   const c = clampToScreen(pet, x, y);
   e.win.setPosition(c.x, c.y);
   Object.assign(pet, c);
+  pet.homeX = c.x; // hier wurde es abgesetzt
   save();
   // auf einem anderen Pet abgesetzt? nach dem Freudenhuepfer zur Seite rutschen (in Zugrichtung)
   setTimeout(() => makeRoom(pet, Math.sign(c.x - d.wx)), 750);
@@ -193,7 +195,7 @@ ipcMain.on('pet:context', (ev) => {
     ...(pet.target ? [{ label: `${APPS[pet.kind].label === 'Keine' ? 'App' : APPS[pet.kind].label} öffnen`, click: () => openApp(pet) }] : []),
     { label: 'Sag was!', click: () => speakNow(pet) },
     { label: pet.muted ? 'Aufwecken' : 'Schlafen legen (keine Erinnerungen)', click: () => { pet.muted = !pet.muted; save(); refreshPet(pet); if (!pet.muted) say(pet.id, 'Bin wieder wach! ☀️', { mood: 'happy' }); } },
-    { label: 'Herumlaufen', type: 'checkbox', checked: pet.wander, click: () => { pet.wander = !pet.wander; save(); } },
+    { label: 'Frei herumwandern', type: 'checkbox', checked: pet.wander, click: () => { pet.wander = !pet.wander; if (!pet.wander) pet.homeX = live.get(pet.id).win.getPosition()[0]; save(); updateTray(); sendSettings(); } },
     { type: 'separator' },
     { label: 'Einstellungen …', click: () => openSettings(pet.id) },
     { label: 'Pet entfernen', click: () => removePet(pet.id) },
@@ -239,7 +241,7 @@ function freeX(pet, x, y, prefer = 0) {
 
 // Gemuetlich nach targetX laufen. Unterwegs darf es an anderen vorbeigehen; ist das Ziel besetzt,
 // laeuft es in derselben Richtung weiter bis zum naechsten freien Platz (am Rand: zurueck).
-function walkTo(pet, targetX, speed = 1.5) {
+function walkTo(pet, targetX, speed = 1.5, { setHome = false } = {}) {
   const e = live.get(pet.id);
   if (!e) return;
   stopWalk(pet.id);
@@ -262,6 +264,7 @@ function walkTo(pet, targetX, speed = 1.5) {
       if (Math.abs(again - cx) > 2) { e.walkTarget = again; dir = Math.sign(again - cx); send(pet.id, 'pet:walk', dir); return; }
       stopWalk(pet.id);
       pet.x = Math.round(cx); pet.y = y;
+      if (setHome) pet.homeX = pet.x;
       save();
     }
   }, 16);
@@ -272,50 +275,56 @@ function makeRoom(pet, prefer = 0) {
   if (!e || e.dragging || e.walking) return;
   const [x, y] = e.win.getPosition();
   const nx = freeX(pet, x, y, prefer);
-  if (nx !== x) walkTo(pet, nx, 2.5);
+  if (nx !== x) walkTo(pet, nx, 2.5, { setHome: true });
 }
 
+// Herumlaufen: frei wandernde Pets ueberall auf der Linie, die anderen nur ein paar Schritte um ihren Platz
 function maybeWander() {
   if (hidden) return;
   for (const pet of state.pets) {
     const e = live.get(pet.id);
     if (!e || e.dragging || e.walking || e.inTalk) continue;
-    if (!pet.wander || pet.muted || Date.now() < e.busyUntil) { makeRoom(pet); continue; }
-    if (Math.random() > 0.18) { makeRoom(pet); continue; }
+    if (pet.muted || Date.now() < e.busyUntil || Math.random() > (pet.wander ? 0.18 : 0.14)) { makeRoom(pet); continue; }
     const [x, y] = e.win.getPosition();
     const [min, max] = xRange(pet, x, y);
-    let dir = Math.random() < 0.5 ? -1 : 1;
-    const dist = 30 + Math.random() * 90;
-    if (x + dir * dist < min || x + dir * dist > max) dir = -dir;
-    walkTo(pet, Math.round(x + dir * dist));
+    const target = strollTarget(pet, x, min, max);
+    if (Math.abs(target - x) < 8) continue;
+    // in der Naehe bleiben: ist das Ziel besetzt, lieber stehen bleiben statt weit auszuweichen
+    if (!pet.wander && freeX(pet, target, y, Math.sign(target - x)) !== target) continue;
+    walkTo(pet, target);
   }
 }
 
-// ---------- Gespraeche ----------
+// ---------- Szenen: Gespraeche und Aktionen, zu zweit oder in der Gruppe ----------
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-async function runDialogue(leftId, rightId) {
-  const a = petById(leftId), b = petById(rightId);
-  const ea = live.get(leftId), eb = live.get(rightId);
-  if (!a || !b || !ea || !eb) return;
+const lineMs = (l) => (l.text ? Math.min(6000, 1800 + l.text.length * 50) : l.mood === 'sleep' ? 3500 : 1400);
+async function runScene(groupIds) {
+  const pets = groupIds.map(petById).filter(Boolean);
+  if (pets.length < 2) return;
+  const scene = pickScene(pets, Math.random, recentScenes);
+  recentScenes.push(scene.key); if (recentScenes.length > 8) recentScenes.shift();
+  const cast = scene.ids.filter((id) => live.has(id));
   talking = true;
-  ea.inTalk = eb.inTalk = true;
-  stopWalk(leftId); stopWalk(rightId);
-  send(leftId, 'pet:face', 1); send(rightId, 'pet:face', -1); // sich anschauen
-  const d = pickDialogue(a, b, Math.random, recentDialogues);
-  recentDialogues.push(d.index); if (recentDialogues.length > 6) recentDialogues.shift();
+  // alle Beteiligten schauen zur Mitte der Gruppe
+  const cx = (id) => live.get(id).win.getPosition()[0];
+  const mid = cast.reduce((s, id) => s + cx(id), 0) / cast.length;
+  for (const id of cast) { const e = live.get(id); e.inTalk = true; stopWalk(id); send(id, 'pet:face', Math.sign(mid - cx(id))); }
   try {
-    for (const line of d.lines) {
-      if (!live.has(leftId) || !live.has(rightId)) break;
-      const ms = Math.min(6000, 1800 + line.text.length * 50);
-      say(line.id, line.text, { ms, mood: 'talk' });
+    for (const line of scene.lines) {
+      if (!cast.every((id) => live.has(id))) break;
+      const ms = lineMs(line);
+      for (const id of line.ids) {
+        if (line.text) say(id, line.text, { ms, mood: line.mood });
+        else send(id, 'pet:mood', { mood: line.mood, ms });
+      }
       await sleep(ms + 250);
     }
   } finally {
-    send(leftId, 'pet:face', 0); send(rightId, 'pet:face', 0);
-    ea.inTalk = eb.inTalk = false;
+    for (const id of cast) { const e = live.get(id); if (e) e.inTalk = false; send(id, 'pet:face', 0); }
     talking = false;
   }
 }
+// Gruppen nebeneinander stehender Pets finden; jede Gruppe plaudert nach ihrer eigenen Wartezeit
 function maybeChat(force = false) {
   if (talking || hidden || state.settings.chatter === 'aus') return null;
   const bounds = [];
@@ -326,16 +335,17 @@ function maybeChat(force = false) {
     const h = winHeight(pet);
     bounds.push({ id: pet.id, x, y: y + BUBBLE_H, width: W, height: h - BUBBLE_H });
   }
-  const pairs = neighborPairs(bounds);
+  const groups = neighborGroups(bounds);
   const now = Date.now();
-  for (const key of pairNext.keys()) if (!pairs.some((p) => p.join('|') === key)) pairNext.delete(key); // auseinandergegangen
-  for (const pair of pairs.sort(() => Math.random() - 0.5)) {
-    const key = pair.join('|');
-    if (!pairNext.has(key) && !force) { pairNext.set(key, now + 25000 + Math.random() * 40000); continue; } // frisch nebeneinander: bald plaudern
-    if (force || now >= pairNext.get(key)) {
-      pairNext.set(key, now + chatterDelay(state.settings.chatter));
-      runDialogue(pair[0], pair[1]);
-      return pair;
+  const keys = groups.map((g) => [...g].sort().join('|'));
+  for (const key of groupNext.keys()) if (!keys.includes(key)) groupNext.delete(key); // auseinandergegangen
+  for (const i of groups.map((_, k) => k).sort(() => Math.random() - 0.5)) {
+    const key = keys[i];
+    if (!groupNext.has(key) && !force) { groupNext.set(key, now + 25000 + Math.random() * 40000); continue; } // frisch zusammen: bald
+    if (force || now >= groupNext.get(key)) {
+      groupNext.set(key, now + chatterDelay(state.settings.chatter));
+      runScene(groups[i]);
+      return groups[i];
     }
   }
   return null;
@@ -433,6 +443,8 @@ ipcMain.handle('settings:save-pet', (_e, data) => {
   const old = petById(data && data.id);
   if (!old) return null;
   const pet = normalizePet({ ...old, ...data, id: old.id, x: old.x, y: old.y });
+  // Wandern ausgeschaltet: ab jetzt in der Naehe des aktuellen Platzes bleiben
+  if (old.wander && !pet.wander && live.get(pet.id)) pet.homeX = live.get(pet.id).win.getPosition()[0];
   state.pets[state.pets.indexOf(old)] = pet;
   save();
   refreshPet(pet);
@@ -510,11 +522,22 @@ function updateTray() {
       { label: 'Beau 🎩 (mit Nook)', click: () => addPet('beau') },
     ] },
     { label: 'Plaudern lassen', enabled: state.pets.length > 1, click: () => maybeChat(true) },
+    { label: 'Alle Pets frei wandern lassen', type: 'checkbox', checked: state.pets.length > 0 && state.pets.every((p) => p.wander), click: (item) => setAllWander(item.checked) },
     { label: 'Einstellungen …', click: () => openSettings() },
     { type: 'separator' },
     updateMenuItem(),
     { label: 'Beenden', click: () => app.quit() },
   ]));
+}
+function setAllWander(on) {
+  for (const p of state.pets) {
+    p.wander = on;
+    const e = live.get(p.id);
+    if (!on && e) p.homeX = e.win.getPosition()[0]; // ab jetzt in der Naehe des aktuellen Platzes bleiben
+  }
+  save();
+  updateTray();
+  sendSettings();
 }
 function toggleHidden() {
   hidden = !hidden;
@@ -604,6 +627,15 @@ async function runSmoke() {
   await sleep(2500);
   report.platz = { vorher: 15, nachher: live.get(p2.id).win.getPosition()[0] - live.get(p1.id).win.getPosition()[0] };
   await shot('2b-platz-gemacht');
+  // alle vier nebeneinander: Gruppenszene
+  await sleep(4000);
+  talking = false;
+  state.pets.forEach((p, i) => { const e = live.get(p.id); stopWalk(p.id); e.busyUntil = 0; e.win.setPosition(a.x + 300 + i * 170, a.y + 200); });
+  await sleep(300);
+  report.gruppe = maybeChat(true);
+  await sleep(2200);
+  report.szene = recentScenes[recentScenes.length - 1];
+  await shot('2c-gruppe');
   openSettings();
   await sleep(1800);
   const img = await settingsWin.webContents.capturePage();

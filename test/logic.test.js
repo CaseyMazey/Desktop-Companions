@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { createPet, normalizeState, dueReminder, neighborPairs, inActiveWindow, overlaps, freeSpot } = require('../src/logic');
-const { pickDialogue, DIALOGUES } = require('../src/dialogues');
+const { createPet, normalizeState, dueReminder, neighborPairs, inActiveWindow, overlaps, freeSpot, neighborGroups, strollTarget, HOME_RADIUS } = require('../src/logic');
+const { pickScene, PAIR, GROUP, rolesOf } = require('../src/dialogues');
 const { validEvent } = require('../src/bridge');
 
 const at = (iso) => new Date(iso);
@@ -71,20 +71,63 @@ test('Platz: aufeinander gilt als belegt, nebeneinander nicht', () => {
   assert.equal(freeSpot(700, 800, 100, others, 0, 2000), 700);             // schon frei
 });
 
-test('Gespraeche: passend zu den Apps, Sprecher korrekt, Namen eingesetzt', () => {
-  const nexus = { id: 'n', kind: 'nexus', name: 'Nexi' }, dan = { id: 'd', kind: 'dan', name: 'Danny' };
-  const i = DIALOGUES.findIndex((d) => d.with && d.with.join() === 'nexus,dan');
-  // nur das NEXUS-DAN-Gespraech frisch lassen
-  const recent = DIALOGUES.map((_, k) => k).filter((k) => k !== i);
-  const d = pickDialogue(dan, nexus, () => 0, recent);
-  assert.equal(d.index, i);
-  assert.equal(d.lines[0].id, 'n');   // NEXUS-Pet faengt an, obwohl es rechts steht
-  assert.equal(d.lines[1].id, 'd');
-  for (let k = 0; k < 50; k++) {
-    const g = pickDialogue({ id: 'a', kind: 'none', name: 'A' }, { id: 'b', kind: 'none', name: 'B' });
-    assert.ok(!DIALOGUES[g.index].with, 'Pets ohne App bekommen nur allgemeine Gespraeche');
-    assert.ok(g.lines.every((l) => !/\{[01]\}/.test(l.text)));
+test('Szenen zu zweit: passend zu den Apps, Rollen richtig besetzt, Namen eingesetzt', () => {
+  const nexus = { id: 'n', kind: 'nexus', species: 'ghost', name: 'Nexi' }, dan = { id: 'd', kind: 'dan', species: 'cat', name: 'Danny' };
+  const i = PAIR.findIndex((s) => s.need && s.need[0].kind === 'nexus' && s.need[1].kind === 'dan');
+  const recent = PAIR.map((_, k) => 'p' + k).filter((k) => k !== 'p' + i); // nur diese Szene frisch lassen
+  const sc = pickScene([dan, nexus], () => 0, recent);
+  assert.equal(sc.key, 'p' + i);
+  assert.deepEqual(sc.lines[0].ids, ['n']);   // NEXUS-Pet faengt an, obwohl es rechts steht
+  assert.deepEqual(sc.lines[1].ids, ['d']);
+  for (let k = 0; k < 80; k++) {
+    const g = pickScene([{ id: 'a', kind: 'none', species: 'blob', name: 'A' }, { id: 'b', kind: 'none', species: 'bird', name: 'B' }]);
+    const s = PAIR[+g.key.slice(1)];
+    assert.ok(!s.need || s.need.every((r) => !r.kind && !r.species), 'Pets ohne App bekommen nur allgemeine Szenen');
+    assert.ok(g.lines.every((l) => !l.text || !/\{\d\}/.test(l.text)));
   }
+});
+
+test('Szenen in der Gruppe: drei und mehr Pets, "alle" heisst alle Beteiligten', () => {
+  const pets = ['a', 'b', 'c', 'd'].map((id) => ({ id, kind: 'none', species: 'blob', name: id.toUpperCase() }));
+  let sawGroup = false, sawFour = false;
+  for (let k = 0; k < 200; k++) {
+    const sc = pickScene(pets);
+    if (sc.key[0] === 'g') {
+      sawGroup = true;
+      if (sc.ids.length === 4) sawFour = true;
+      assert.ok(sc.ids.length >= 3 && sc.ids.length === rolesOf(GROUP[+sc.key.slice(1)]));
+      const all = sc.lines.find((l) => l.ids.length > 1);
+      if (all) assert.deepEqual([...all.ids].sort(), [...sc.ids].sort());
+    } else {
+      assert.equal(sc.ids.length, 2);
+    }
+    assert.ok(sc.lines.every((l) => ['talk', 'happy', 'sleep', 'alert', 'sad'].includes(l.mood)));
+  }
+  assert.ok(sawGroup && sawFour);
+  // Beau-Szenen nur mit Beau
+  for (let k = 0; k < 100; k++) {
+    const sc = pickScene(pets.slice(0, 2));
+    const s = PAIR[+sc.key.slice(1)];
+    assert.ok(!(s.need || []).some((r) => r.species === 'beau'));
+  }
+});
+
+test('Gruppen: Pets, die ueber Nachbarn verbunden sind, links nach rechts', () => {
+  const b = (id, x) => ({ id, x, y: 300, width: 260, height: 110 });
+  assert.deepEqual(neighborGroups([b('c', 500), b('a', 180), b('b', 340), b('weit', 1500), b('weit2', 1660)]), [['a', 'b', 'c'], ['weit', 'weit2']]);
+  assert.deepEqual(neighborGroups([b('allein', 0)]), []);
+});
+
+test('Wandern aus: bleibt in der Naehe seines Platzes', () => {
+  const pet = { wander: false, homeX: 500 };
+  for (let k = 0; k < 200; k++) {
+    const t = strollTarget(pet, 520, 0, 3000);
+    assert.ok(Math.abs(t - 500) <= HOME_RADIUS, `zu weit weg: ${t}`);
+  }
+  let far = 0;
+  for (let k = 0; k < 200; k++) if (Math.abs(strollTarget({ wander: true }, 1500, 0, 3000) - 1500) > HOME_RADIUS) far++;
+  assert.ok(far > 100, 'frei wandernde Pets laufen auch weiter weg');
+  assert.ok(strollTarget({ wander: true }, 10, 0, 3000) >= 0); // nie ueber den Rand
 });
 
 test('Schnittstelle: nur bekannte Ereignisse', () => {

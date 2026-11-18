@@ -51,6 +51,7 @@ function normalizePet(p) {
     muted: !!p.muted,
     x: Number.isFinite(p.x) ? Math.round(p.x) : null,
     y: Number.isFinite(p.y) ? Math.round(p.y) : null,
+    homeX: Number.isFinite(p.homeX) ? Math.round(p.homeX) : null, // wo es abgesetzt wurde (fuer "nicht frei wandern")
     reminders: normalizeReminders(p.reminders, kind),
   };
 }
@@ -156,11 +157,43 @@ function freeSpot(cx, bottom, size, others, min, max, prefer = 0) {
   return r - cx <= cx - l ? r : l;
 }
 
-const CHATTER_MIN ={ selten: [8, 15], normal: [3, 7], oft: [1, 3] };
+// ---------- Herumlaufen ----------
+// Frei wandern: irgendwo auf der Linie. Sonst nur ein paar Schritte um den Absetzpunkt (homeX),
+// damit Pets, die man nebeneinander gestellt hat, auch nebeneinander bleiben.
+const HOME_RADIUS = 40;
+function strollTarget(pet, x, min, max, rand = Math.random) {
+  if (pet.wander) {
+    let dir = rand() < 0.5 ? -1 : 1;
+    const dist = 30 + rand() * 90;
+    if (x + dir * dist < min || x + dir * dist > max) dir = -dir;
+    return Math.round(Math.min(max, Math.max(min, x + dir * dist)));
+  }
+  const home = pet.homeX ?? x;
+  const t = home + (rand() * 2 - 1) * HOME_RADIUS;
+  return Math.round(Math.min(max, Math.max(min, t)));
+}
+
+// Gruppen: alle Pets, die ueber Nachbarn verbunden sind (A neben B neben C = eine Gruppe), links nach rechts
+function neighborGroups(bounds, maxDx = 300, maxDy = 140) {
+  const pairs = neighborPairs(bounds, maxDx, maxDy);
+  const parent = new Map(bounds.map((b) => [b.id, b.id]));
+  const find = (a) => (parent.get(a) === a ? a : find(parent.get(a)));
+  for (const [a, b] of pairs) parent.set(find(a), find(b));
+  const groups = new Map();
+  for (const b of bounds) {
+    const r = find(b.id);
+    if (!groups.has(r)) groups.set(r, []);
+    groups.get(r).push(b);
+  }
+  return [...groups.values()].filter((g) => g.length > 1)
+    .map((g) => g.sort((a, b) => (a.x + a.width / 2) - (b.x + b.width / 2)).map((b) => b.id));
+}
+
+const CHATTER_MIN = { selten: [8, 15], normal: [3, 7], oft: [1, 3] };
 function chatterDelay(level, rand = Math.random) {
   const r = CHATTER_MIN[level];
   if (!r) return null;
   return (r[0] + rand() * (r[1] - r[0])) * 60000;
 }
 
-module.exports = { createPet, normalizePet, normalizeState, dueReminder, inActiveWindow, pickMessage, neighborPairs, chatterDelay, overlaps, freeSpot, KINDS };
+module.exports = { createPet, normalizePet, normalizeState, dueReminder, inActiveWindow, pickMessage, neighborPairs, neighborGroups, strollTarget, HOME_RADIUS, chatterDelay, overlaps, freeSpot, KINDS };
