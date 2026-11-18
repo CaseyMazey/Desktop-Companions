@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:">
+  <title>Pets – Einstellungen</title>
+  <link rel="stylesheet" href="settings.css">
+</head>
+<body>
+  <aside>
+    <h1>🐾 Pets</h1>
+    <ul id="list"></ul>
+    <div class="add">
+      <select id="add-kind" aria-label="App für das neue Pet">
+        <option value="nexus">mit NEXUS</option>
+        <option value="dan">mit DAN</option>
+        <option value="nook">mit Nook</option>
+        <option value="custom">mit eigener App</option>
+        <option value="none">ohne App</option>
+      </select>
+      <button id="add" class="primary">+ Neues Pet</button>
+    </div>
+    <section class="global">
+      <h2>Gespräche</h2>
+      <p class="hint">Stehen zwei Pets nebeneinander, plaudern sie ab und zu.</p>
+      <select id="chatter" aria-label="Wie oft plaudern">
+        <option value="aus">aus</option><option value="selten">selten</option><option value="normal">normal</option><option value="oft">oft</option>
+      </select>
+      <button id="chat-now">Jetzt plaudern</button>
+      <label class="check" id="autostart-row"><input type="checkbox" id="autostart"> Mit Windows starten</label>
+    </section>
+  </aside>
+
+  <main id="editor">
+    <p class="empty">Wähle links ein Pet aus oder leg ein neues an.</p>
+  </main>
+
+  <template id="tpl-editor">
+    <header>
+      <div id="preview" aria-hidden="true"></div>
+      <div class="grow">
+        <input id="f-name" class="title" maxlength="24" aria-label="Name">
+        <p class="hint" id="kind-hint"></p>
+      </div>
+      <button id="say">💬 Sag was</button>
+    </header>
+
+    <fieldset>
+      <legend>Aussehen</legend>
+      <div class="row">
+        <label>Tier <select id="f-species"></select></label>
+        <label>Farbe <input type="color" id="f-color"></label>
+        <label class="grow">Größe <input type="range" id="f-size" min="70" max="160" step="5"></label>
+      </div>
+      <div class="row">
+        <label class="check"><input type="checkbox" id="f-wander"> läuft ab und zu herum</label>
+        <label class="check"><input type="checkbox" id="f-muted"> schläft (keine Erinnerungen, keine Gespräche)</label>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Verbindung</legend>
+      <div class="row">
+        <label>Verbunden mit
+          <select id="f-kind">
+            <option value="nexus">NEXUS</option><option value="dan">DAN</option><option value="nook">Nook</option>
+            <option value="custom">Eigene App</option><option value="none">Keine</option>
+          </select>
+        </label>
+        <label class="grow">Öffnet beim Klick (Programm, Datei oder https://-Adresse)
+          <span class="inline"><input id="f-target" spellcheck="false"><button id="pick">Durchsuchen …</button><button id="open">Testen</button></span>
+        </label>
+      </div>
+      <label class="check"><input type="checkbox" id="f-events"> <span id="events-label">Meldungen der App anzeigen</span></label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Erinnerungen &amp; Sprüche</legend>
+      <label class="check"><input type="checkbox" id="r-enabled"> regelmäßig etwas sagen</label>
+      <div class="row">
+        <label class="inline-label">alle <input type="number" id="r-interval" min="5" max="600" class="short"> Minuten</label>
+        <label>von <input type="time" id="r-from"></label>
+        <label>bis <input type="time" id="r-to"></label>
+        <label class="check"><input type="checkbox" id="r-workdays"> nur Mo–Fr</label>
+      </div>
+      <label>Sprüche (einer pro Zeile, zufällige Reihenfolge)
+        <textarea id="r-messages" rows="6"></textarea>
+      </label>
+      <label>Feste Uhrzeiten (eine pro Zeile, z. B. <code>12:30 Mittagspause!</code>) – gilt auch an freien Tagen
+        <textarea id="r-timed" rows="3" spellcheck="false"></textarea>
+      </label>
+    </fieldset>
+
+    <footer>
+      <span class="hint" id="saved"></span>
+      <button id="remove" class="danger">Pet entfernen</button>
+    </footer>
+  </template>
+
+  <script src="../pet/species.js"></script>
+  <script src="settings.js"></script>
+</body>
+</html>

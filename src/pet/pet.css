@@ -1,0 +1,94 @@
+html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; user-select: none; -webkit-user-select: none;
+  font: 13px/1.35 "Segoe UI", system-ui, sans-serif; }
+#stage { position: relative; height: 100%; }
+
+/* ---------- Pet ---------- */
+#pet { --size: 100px; position: absolute; left: 50%; bottom: 4px; width: var(--size); height: var(--size);
+  transform: translateX(-50%); cursor: grab; }
+#pet.drag { cursor: grabbing; }
+#flip { width: 100%; height: 100%; transition: transform .25s ease; transform-origin: 50% 100%; }
+#flip.left { transform: scaleX(-1); }
+#sprite { width: 100%; height: 100%; transform-origin: 50% 100%; }
+#sprite svg { width: 100%; height: 100%; overflow: visible; display: block; filter: drop-shadow(0 2px 2px rgba(0,0,0,.18)); }
+.body { fill: var(--c); stroke: var(--c-dark); stroke-width: 2.5; stroke-linejoin: round; }
+.stripe { stroke: var(--c-dark); }
+.cheek { fill: #fb7185; opacity: .45; }
+#shadow { position: absolute; left: 18%; right: 18%; bottom: -3px; height: 8px; border-radius: 50%; background: rgba(0,0,0,.22);
+  z-index: -1; filter: blur(1.5px); transform-origin: 50% 50%; }
+#name { position: absolute; left: 50%; top: -6px; transform: translate(-50%, -100%); font-size: 11px; font-weight: 600; color: #fff;
+  background: rgba(30, 27, 46, .85); padding: 1px 7px; border-radius: 8px; white-space: nowrap; opacity: 0; transition: opacity .2s; pointer-events: none; }
+#pet:hover #name { opacity: 1; }
+body:has(#bubble.show) #name { opacity: 0 !important; }
+
+/* Gesichtsteile je nach Stimmung */
+.eyes-closed, .eyes-happy, .mouth, .beak-open { display: none; }
+.mouth-idle { display: inline; }
+.talk .mouth-idle, .happy .mouth-idle, .sad .mouth-idle, .alert .mouth-idle, .sleep .mouth-idle { display: none; }
+.talk .mouth-talk { display: inline; animation: talk .28s steps(2) infinite; }
+.happy .mouth-happy, .sad .mouth-sad, .alert .mouth-alert, .sleep .mouth-sad { display: inline; }
+.sleep .mouth-sad { opacity: 0; }
+.happy .eyes, .sleep .eyes { display: none; }
+.happy .eyes-happy, .sleep .eyes-closed { display: inline; }
+.talk .beak { animation: beak .28s steps(2) infinite; }
+.blink .eye { transform: scaleY(.1); }
+.eye { transform-box: fill-box; transform-origin: center; transition: transform .07s; }
+.look .eyes { transform: translateX(3px); }
+.eyes { transition: transform .3s; }
+
+/* Grundbewegungen */
+.idle #sprite, .talk #sprite { animation: breathe 3.2s ease-in-out infinite; }
+.sp-ghost { animation: float 3s ease-in-out infinite; }
+.happy #sprite { animation: hop .5s ease-out 3; }
+.alert #sprite { animation: wiggle .45s ease-in-out 4; }
+.sad #sprite { animation: droop 2s ease-in-out infinite; }
+.sleep #sprite { animation: breathe 5s ease-in-out infinite; filter: saturate(.75); }
+.walk #sprite { animation: waddle .36s ease-in-out infinite; }
+.drag #sprite { animation: dangle .9s ease-in-out infinite; transform-origin: 50% 0; }
+.drag #shadow { opacity: .1; transform: scale(.6); }
+.limb, .tail { transform-box: fill-box; }
+.limb-l, .wing-l { transform-origin: right center; } .limb-r, .wing-r { transform-origin: left center; }
+.tail { transform-origin: left bottom; animation: tail 2.4s ease-in-out infinite; }
+.happy .limb-l, .happy .wing-l, .alert .limb-l, .alert .wing-l { animation: wave-l .25s ease-in-out infinite alternate; }
+.happy .limb-r, .happy .wing-r, .alert .limb-r, .alert .wing-r { animation: wave-r .25s ease-in-out infinite alternate; }
+.walk .wing-l, .walk .limb-l { animation: wave-l .36s ease-in-out infinite alternate; }
+.walk .wing-r, .walk .limb-r { animation: wave-r .36s ease-in-out infinite alternate; }
+
+@keyframes breathe { 0%,100% { transform: scale(1,1); } 50% { transform: scale(1.03,.965); } }
+@keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+@keyframes hop { 0% { transform: translateY(0) scale(1.08,.9); } 40% { transform: translateY(-22px) scale(.95,1.06); } 75% { transform: translateY(0) scale(1.1,.88); } 100% { transform: none; } }
+@keyframes wiggle { 0%,100% { transform: rotate(0); } 25% { transform: rotate(-7deg); } 75% { transform: rotate(7deg); } }
+@keyframes droop { 0%,100% { transform: scale(1.02,.96); } 50% { transform: scale(1.04,.93); } }
+@keyframes waddle { 0%,100% { transform: rotate(-5deg) translateY(0); } 50% { transform: rotate(5deg) translateY(-4px); } }
+@keyframes dangle { 0%,100% { transform: rotate(-9deg); } 50% { transform: rotate(9deg); } }
+@keyframes tail { 0%,100% { transform: rotate(0); } 50% { transform: rotate(-12deg); } }
+@keyframes wave-l { from { transform: rotate(0); } to { transform: rotate(28deg); } }
+@keyframes wave-r { from { transform: rotate(0); } to { transform: rotate(-28deg); } }
+@keyframes talk { 0% { transform: scaleY(1); } 100% { transform: scaleY(.35); } }
+@keyframes beak { 0% { opacity: 1; } 100% { opacity: .2; } }
+.mouth-talk { transform-box: fill-box; transform-origin: center; }
+
+/* Zzz beim Schlafen */
+#zzz { position: absolute; right: 2%; top: 4%; display: none; color: #a5b4fc; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,.4); pointer-events: none; }
+.sleep #zzz { display: block; }
+#zzz span { position: absolute; opacity: 0; animation: zzz 3s linear infinite; }
+#zzz span:nth-child(2) { animation-delay: 1s; font-size: 15px; }
+#zzz span:nth-child(3) { animation-delay: 2s; font-size: 19px; }
+@keyframes zzz { 0% { opacity: 0; transform: translate(0,0); } 20% { opacity: 1; } 100% { opacity: 0; transform: translate(16px,-34px); } }
+
+/* Herzchen bei Freude */
+#hearts { position: absolute; inset: 0; pointer-events: none; }
+#hearts i { position: absolute; bottom: 60%; font-style: normal; animation: heart 1.6s ease-out forwards; }
+@keyframes heart { 0% { opacity: 0; transform: translateY(0) scale(.6); } 20% { opacity: 1; } 100% { opacity: 0; transform: translateY(-50px) scale(1.1); } }
+
+/* ---------- Sprechblase ---------- */
+#bubble { position: absolute; left: 50%; bottom: calc(var(--size, 100px) + 14px); transform: translate(-50%, 8px) scale(.9);
+  max-width: 228px; width: max-content; box-sizing: border-box; padding: 8px 12px; border-radius: 14px; background: #fffdf7; color: #1f2937;
+  box-shadow: 0 4px 14px rgba(0,0,0,.22), 0 0 0 1.5px rgba(30,27,46,.12); opacity: 0; pointer-events: none;
+  transition: opacity .18s, transform .18s; text-align: center; word-wrap: break-word; }
+#bubble.show { opacity: 1; transform: translate(-50%, 0) scale(1); pointer-events: auto; }
+#bubble.open { cursor: pointer; }
+#bubble.open:hover { background: #fff7e0; }
+#bubble::after { content: ""; position: absolute; left: 50%; bottom: -7px; width: 14px; height: 14px; background: inherit; transform: translateX(-50%) rotate(45deg);
+  box-shadow: 2px 2px 0 0 rgba(30,27,46,.08); border-radius: 0 0 3px 0; }
+#bubble-hint { display: none; margin-top: 3px; font-size: 10.5px; color: #6b7280; }
+#bubble.open #bubble-hint { display: block; }
