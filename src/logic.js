@@ -130,11 +130,36 @@ function neighborPairs(bounds, maxDx = 300, maxDy = 140) {
   return pairs;
 }
 
-const CHATTER_MIN = { selten: [8, 15], normal: [3, 7], oft: [1, 3] };
+// ---------- Platz zum Stehen ----------
+// others: [{ cx, bottom, size }] – Mitte und Fussposition der anderen Pets (in Bildschirm-Pixeln)
+// Zwei Pets ueberlappen, wenn sie auf etwa gleicher Hoehe stehen und sich ihre Koerper beruehren.
+function overlaps(cx, bottom, size, others, gap = 8) {
+  return others.some((o) => Math.abs(o.bottom - bottom) < (size + o.size) * 0.45
+    && Math.abs(o.cx - cx) < (size + o.size) * 0.46 + gap);
+}
+
+// Naechste freie Mitte neben cx; prefer = -1 | 1 sucht zuerst in diese Richtung. min/max: erlaubte Mitten.
+function freeSpot(cx, bottom, size, others, min, max, prefer = 0) {
+  if (!overlaps(cx, bottom, size, others)) return cx;
+  const search = (dir) => {
+    for (let x = cx + dir * 4; x >= min && x <= max; x += dir * 4) if (!overlaps(x, bottom, size, others)) return x;
+    return null;
+  };
+  if (prefer) { // erst ganz in Laufrichtung suchen, dann in die andere
+    const a = search(prefer);
+    return a ?? search(-prefer) ?? cx;
+  }
+  const r = search(1), l = search(-1); // ohne Vorgabe: der naechste freie Platz
+  if (r == null) return l ?? cx; // kein Platz (Bildschirm voller Pets): stehen lassen
+  if (l == null) return r;
+  return r - cx <= cx - l ? r : l;
+}
+
+const CHATTER_MIN ={ selten: [8, 15], normal: [3, 7], oft: [1, 3] };
 function chatterDelay(level, rand = Math.random) {
   const r = CHATTER_MIN[level];
   if (!r) return null;
   return (r[0] + rand() * (r[1] - r[0])) * 60000;
 }
 
-module.exports = { createPet, normalizePet, normalizeState, dueReminder, inActiveWindow, pickMessage, neighborPairs, chatterDelay, KINDS };
+module.exports = { createPet, normalizePet, normalizeState, dueReminder, inActiveWindow, pickMessage, neighborPairs, chatterDelay, overlaps, freeSpot, KINDS };

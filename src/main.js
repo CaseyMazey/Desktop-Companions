@@ -6,7 +6,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const http = require('node:http');
 const { APPS, SPECIES } = require('./presets');
-const { createPet, normalizePet, normalizeState, dueReminder, pickMessage, neighborPairs, chatterDelay, KINDS } = require('./logic');
+const { createPet, normalizePet, normalizeState, dueReminder, pickMessage, neighborPairs, chatterDelay, freeSpot, KINDS } = require('./logic');
 const { pickDialogue } = require('./dialogues');
 const { startBridge, PORT } = require('./bridge');
 const { iconPng } = require('./icon');
@@ -158,6 +158,8 @@ ipcMain.on('pet:drag-end', (ev) => {
   e.win.setPosition(c.x, c.y);
   Object.assign(pet, c);
   save();
+  // auf einem anderen Pet abgesetzt? nach dem Freudenhuepfer zur Seite rutschen (in Zugrichtung)
+  setTimeout(() => makeRoom(pet, Math.sign(c.x - d.wx)), 750);
 });
 ipcMain.on('pet:bubble-click', (ev, open) => {
   const [id] = entryOf(ev.sender);
@@ -193,32 +195,82 @@ function stopWalk(id) {
   if (!e || !e.walking) return;
   clearInterval(e.walking);
   e.walking = null;
+  e.walkTarget = null;
   send(id, 'pet:walk', 0);
 }
+// Wo stehen die anderen Pets (bzw. wo werden sie gleich stehen)? Fuer "nicht aufeinander stehen bleiben".
+function othersOf(id) {
+  const out = [];
+  for (const p of state.pets) {
+    const e = live.get(p.id);
+    if (p.id === id || !e || e.dragging || e.win.isDestroyed()) continue;
+    const [x, y] = e.win.getPosition();
+    out.push({ cx: (e.walkTarget ?? x) + W / 2, bottom: y + winHeight(p), size: p.size });
+  }
+  return out;
+}
+// Erlaubte Fensterpositionen (x) auf dem Bildschirm, auf dem das Pet steht
+function xRange(pet, x, y) {
+  const a = workAreaAt(x + W / 2, y + winHeight(pet) / 2);
+  return [a.x - W / 2 + 40, a.x + a.width - W / 2 - 40];
+}
+// Freier Platz fuer das Fenster bei x (prefer: Suchrichtung)
+function freeX(pet, x, y, prefer = 0) {
+  const [min, max] = xRange(pet, x, y);
+  return Math.round(freeSpot(x + W / 2, y + winHeight(pet), pet.size, othersOf(pet.id), min + W / 2, max + W / 2, prefer) - W / 2);
+}
+
+// Gemuetlich nach targetX laufen. Unterwegs darf es an anderen vorbeigehen; ist das Ziel besetzt,
+// laeuft es in derselben Richtung weiter bis zum naechsten freien Platz (am Rand: zurueck).
+function walkTo(pet, targetX, speed = 1.5) {
+  const e = live.get(pet.id);
+  if (!e) return;
+  stopWalk(pet.id);
+  const [x, y] = e.win.getPosition();
+  let dir = Math.sign(targetX - x);
+  targetX = freeX(pet, targetX, y, dir);
+  dir = Math.sign(targetX - x);
+  if (!dir) return;
+  e.walkTarget = targetX;
+  send(pet.id, 'pet:walk', dir);
+  let cx = x;
+  e.walking = setInterval(() => {
+    if (e.win.isDestroyed()) return stopWalk(pet.id);
+    cx += dir * speed;
+    e.win.setPosition(Math.round(cx), y);
+    if ((dir > 0 && cx >= e.walkTarget) || (dir < 0 && cx <= e.walkTarget)) {
+      // ist inzwischen jemand anderes dort stehen geblieben? dann noch ein Stueck weiter
+      e.walkTarget = null;
+      const again = freeX(pet, Math.round(cx), y, dir);
+      if (Math.abs(again - cx) > 2) { e.walkTarget = again; dir = Math.sign(again - cx); send(pet.id, 'pet:walk', dir); return; }
+      stopWalk(pet.id);
+      pet.x = Math.round(cx); pet.y = y;
+      save();
+    }
+  }, 16);
+}
+// Steht ein Pet auf einem anderen? Dann zur Seite gehen.
+function makeRoom(pet, prefer = 0) {
+  const e = live.get(pet.id);
+  if (!e || e.dragging || e.walking) return;
+  const [x, y] = e.win.getPosition();
+  const nx = freeX(pet, x, y, prefer);
+  if (nx !== x) walkTo(pet, nx, 2.5);
+}
+
 function maybeWander() {
   if (hidden) return;
   for (const pet of state.pets) {
     const e = live.get(pet.id);
-    if (!e || !pet.wander || pet.muted || e.dragging || e.walking || e.inTalk || Date.now() < e.busyUntil) continue;
-    if (Math.random() > 0.18) continue;
+    if (!e || e.dragging || e.walking || e.inTalk) continue;
+    if (!pet.wander || pet.muted || Date.now() < e.busyUntil) { makeRoom(pet); continue; }
+    if (Math.random() > 0.18) { makeRoom(pet); continue; }
     const [x, y] = e.win.getPosition();
-    const a = workAreaAt(x + W / 2, y + winHeight(pet) / 2);
+    const [min, max] = xRange(pet, x, y);
     let dir = Math.random() < 0.5 ? -1 : 1;
     const dist = 30 + Math.random() * 90;
-    if (x + dir * dist < a.x - W / 2 + 40 || x + dir * dist > a.x + a.width - W / 2 - 40) dir = -dir;
-    const target = x + dir * dist;
-    send(pet.id, 'pet:walk', dir);
-    let cx = x;
-    e.walking = setInterval(() => {
-      if (e.win.isDestroyed()) return stopWalk(pet.id);
-      cx += dir * 1.5;
-      e.win.setPosition(Math.round(cx), y);
-      if ((dir > 0 && cx >= target) || (dir < 0 && cx <= target)) {
-        stopWalk(pet.id);
-        pet.x = Math.round(cx); pet.y = y;
-        save();
-      }
-    }, 16);
+    if (x + dir * dist < min || x + dir * dist > max) dir = -dir;
+    walkTo(pet, Math.round(x + dir * dist));
   }
 }
 
@@ -412,6 +464,7 @@ app.whenReady().then(() => {
     save();
   }
   for (const pet of state.pets) createPetWindow(pet);
+  if (!SMOKE) setTimeout(() => state.pets.forEach((p) => makeRoom(p)), 1500);
   tray = new Tray(icon);
   tray.setToolTip('Pets');
   tray.on('click', () => openSettings());
@@ -460,6 +513,15 @@ async function runSmoke() {
   report.chatPair = maybeChat(true);
   await sleep(1300);
   await shot('2-gespraech-und-erinnerung');
+  // zwei Pets aufeinander: eins muss zur Seite gehen
+  await sleep(6000);
+  const [p1, p2] = state.pets;
+  const [x1, y1] = live.get(p1.id).win.getPosition();
+  live.get(p2.id).win.setPosition(x1 + 15, y1);
+  makeRoom(p2, 1);
+  await sleep(2500);
+  report.platz = { vorher: 15, nachher: live.get(p2.id).win.getPosition()[0] - live.get(p1.id).win.getPosition()[0] };
+  await shot('2b-platz-gemacht');
   openSettings();
   await sleep(1800);
   const img = await settingsWin.webContents.capturePage();

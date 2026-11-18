@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { createPet, normalizeState, dueReminder, neighborPairs, inActiveWindow } = require('../src/logic');
+const { createPet, normalizeState, dueReminder, neighborPairs, inActiveWindow, overlaps, freeSpot } = require('../src/logic');
 const { pickDialogue, DIALOGUES } = require('../src/dialogues');
 const { validEvent } = require('../src/bridge');
 
@@ -58,6 +58,17 @@ test('Nachbarn: nur Pets nah nebeneinander, links zuerst', () => {
   const b = (id, x, y) => ({ id, x, y, width: 260, height: 110 });
   assert.deepEqual(neighborPairs([b('r', 500, 300), b('l', 340, 310), b('weit', 1400, 300)]), [['l', 'r']]);
   assert.deepEqual(neighborPairs([b('a', 0, 0), b('b', 100, 500)]), []);
+});
+
+test('Platz: aufeinander gilt als belegt, nebeneinander nicht', () => {
+  const others = [{ cx: 500, bottom: 800, size: 100 }];
+  assert.equal(overlaps(510, 800, 100, others), true);
+  assert.equal(overlaps(600, 800, 100, others), false);       // daneben
+  assert.equal(overlaps(510, 400, 100, others), false);       // anderer Hoehe (z. B. anderes Fenster)
+  assert.equal(freeSpot(520, 800, 100, others, 0, 2000, 1) > 540, true);   // nach rechts ausweichen
+  assert.equal(freeSpot(520, 800, 100, others, 0, 2000, -1) < 460, true);  // nach links ausweichen
+  assert.equal(freeSpot(520, 800, 100, others, 0, 540, 1) < 460, true);    // rechts kein Platz: links
+  assert.equal(freeSpot(700, 800, 100, others, 0, 2000), 700);             // schon frei
 });
 
 test('Gespraeche: passend zu den Apps, Sprecher korrekt, Namen eingesetzt', () => {
