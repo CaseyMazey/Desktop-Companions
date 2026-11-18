@@ -15,7 +15,10 @@ const SMOKE = process.argv.includes('--smoke');
 if (SMOKE) app.setPath('userData', path.join(os.tmpdir(), `pets-smoke-${Date.now()}`));
 if (!SMOKE && !app.requestSingleInstanceLock()) app.quit();
 
-const W = 260;                                  // Fensterbreite (Platz fuer die Sprechblase)
+// Klicks neben dem Pet durchlassen geht nur unter Windows und macOS (Linux kennt kein "forward")
+const CLICK_THROUGH = process.platform !== 'linux';
+if (process.platform === 'linux') app.commandLine.appendSwitch('enable-transparent-visuals');
+const W = 260;                                 // Fensterbreite (Platz fuer die Sprechblase)
 const BUBBLE_H = 120;                           // Hoehe ueber dem Pet fuer die Sprechblase
 const winHeight = (pet) => BUBBLE_H + Math.round(pet.size * 1.15) + 8;
 const icon = nativeImage.createFromBuffer(iconPng(32));
@@ -75,7 +78,8 @@ function createPetWindow(pet) {
     webPreferences: { preload: path.join(__dirname, 'pet', 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true },
   });
   win.setAlwaysOnTop(true, 'screen-saver');
-  win.setIgnoreMouseEvents(true, { forward: true });
+  if (CLICK_THROUGH) win.setIgnoreMouseEvents(true, { forward: true });
+  win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   win.loadFile(path.join(__dirname, 'pet', 'pet.html'), { query: { id: pet.id } });
   win.webContents.on('did-finish-load', () => { const p = petById(pet.id); if (p) win.webContents.send('pet:update', publicPet(p)); });
   win.once('ready-to-show', () => { if (!hidden) win.showInactive(); });
@@ -125,7 +129,7 @@ async function openApp(pet) {
 // ---------- Ziehen & Klicken ----------
 ipcMain.on('pet:hover', (ev, over) => {
   const [, e] = entryOf(ev.sender);
-  if (e && !e.dragging) e.win.setIgnoreMouseEvents(!over, { forward: true });
+  if (e && !e.dragging && CLICK_THROUGH) e.win.setIgnoreMouseEvents(!over, { forward: true });
 });
 ipcMain.on('pet:drag-start', (ev) => {
   const [id, e] = entryOf(ev.sender);
@@ -455,6 +459,7 @@ app.on('window-all-closed', () => { /* Pets laufen im Tray weiter */ });
 
 app.whenReady().then(() => {
   if (process.platform === 'win32') app.setAppUserModelId('io.github.caseymazey.pets');
+  if (process.platform === 'darwin' && app.dock) app.dock.hide(); // Pets leben in der Menueleiste, nicht im Dock
   load();
   if (state.settings.firstRun && !state.pets.length) {
     // Erster Start: je ein Pet fuer jede gefundene App, nebeneinander (damit sie gleich plaudern koennen)

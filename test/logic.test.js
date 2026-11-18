@@ -10,7 +10,7 @@ test('Voreinstellungen: DAN erinnert werktags, NEXUS nicht', () => {
   const dan = createPet('dan');
   assert.equal(dan.reminders.enabled, true);
   assert.equal(dan.reminders.onlyWorkdays, true);
-  assert.match(dan.target, /DAN\.exe$/);
+  assert.match(dan.target, process.platform === 'win32' ? /DAN\.exe$/ : process.platform === 'darwin' ? /DAN\.app$/ : /dan$/);
   assert.equal(createPet('nexus').reminders.enabled, false);
   assert.equal(createPet('quatsch').kind, 'none');
 });

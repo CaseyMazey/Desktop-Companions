@@ -4,18 +4,21 @@ const path = require('node:path');
 const os = require('node:os');
 
 const programs = () => path.join(process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local'), 'Programs');
+// Wo die Apps nach der Installation liegen: Windows (Benutzer-Installation), macOS (Programme), Linux (deb)
+const where = (win, mac, linux) => () => (process.platform === 'win32' ? path.join(programs(), ...win)
+  : process.platform === 'darwin' ? mac : linux);
 
 const APPS = {
   nexus: {
     label: 'NEXUS',
-    target: () => path.join(programs(), 'nexus', 'NEXUS.exe'),
+    target: where(['nexus', 'NEXUS.exe'], '/Applications/NEXUS.app', '/opt/NEXUS/nexus'),
     hint: 'Meldet sich, wenn ein Auftrag in 3C fertig ist oder Claude eine Entscheidung braucht.',
     reminders: { enabled: false, intervalMin: 90, onlyWorkdays: false, from: '08:00', to: '20:00', messages: ['Brauchst du Hilfe? NEXUS ist nur einen Klick entfernt.'], timed: [] },
     events: true,
   },
   dan: {
     label: 'DAN',
-    target: () => path.join(programs(), 'dan-app', 'DAN.exe'),
+    target: where(['dan-app', 'DAN.exe'], '/Applications/DAN.app', '/opt/DAN/dan'),
     hint: 'Erinnert dich regelmäßig daran aufzuschreiben, was du gerade machst.',
     reminders: {
       enabled: true, intervalMin: 60, onlyWorkdays: true, from: '07:30', to: '16:30',
@@ -32,7 +35,7 @@ const APPS = {
   },
   nook: {
     label: 'Nook',
-    target: () => path.join(programs(), 'nook-desktop', 'Nook.exe'),
+    target: where(['nook-desktop', 'Nook.exe'], '/Applications/Nook.app', '/opt/Nook/nook-desktop'),
     hint: 'Sagt dir ab und zu etwas Nettes und erinnert dich an Pausen und Wasser.',
     reminders: {
       enabled: true, intervalMin: 45, onlyWorkdays: false, from: '08:00', to: '22:00',

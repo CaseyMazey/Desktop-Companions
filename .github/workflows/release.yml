@@ -1,0 +1,71 @@
+# Neue Version veroeffentlichen: Version in package.json erhoehen, dann Tag v<version> pushen
+# (z.B. git tag v0.2.0 && git push --tags). Baut Pets auf Windows, macOS und Linux und legt ein
+# GitHub-Release mit allen Installern an.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - os: windows-latest
+            dist: dist:win
+          - os: macos-latest
+            dist: dist:mac
+          - os: ubuntu-latest
+            dist: dist:linux
+    runs-on: ${{ matrix.os }}
+    env:
+      # kein Apple-Entwicklerkonto: nicht nach Zertifikaten suchen (ad-hoc-Signatur, siehe package.json)
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run ${{ matrix.dist }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pets-${{ matrix.os }}
+          if-no-files-found: error
+          path: |
+            dist/*.exe
+            dist/*.dmg
+            dist/*.zip
+            dist/*.AppImage
+            dist/*.deb
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
+      - name: Release anlegen
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          VERSION="${TAG#v}"
+          # Feste Namen fuer die Download-Knoepfe in der README (zeigen immer auf die neueste Version)
+          cp "out/Pets-Setup-${VERSION}.exe"               out/Pets-Setup.exe
+          cp "out/Pets-mac-arm64-${VERSION}.dmg"           out/Pets-mac-arm64.dmg
+          cp "out/Pets-mac-x64-${VERSION}.dmg"             out/Pets-mac-x64.dmg
+          cp "out/Pets-linux-x86_64-${VERSION}.AppImage"   out/Pets-linux-x86_64.AppImage
+          cp "out/Pets-linux-amd64-${VERSION}.deb"         out/Pets-linux-amd64.deb
+          ls -la out
+          gh release create "$TAG" out/* --title "Pets ${VERSION}" --generate-notes --verify-tag
