@@ -1,10 +1,10 @@
 {
-  "name": "pets",
-  "productName": "Pets",
+  "name": "desktop-companions",
+  "productName": "Desktop Companions",
   "version": "0.2.0",
   "private": true,
-  "description": "Pets - kleine Bildschirm-Begleiter, die sich mit NEXUS, DAN, Nook oder jeder anderen App verbinden",
-  "desktopName": "pets.desktop",
+  "description": "Desktop Companions - kleine Bildschirm-Begleiter, die sich mit NEXUS, DAN, Nook oder jeder anderen App verbinden",
+  "desktopName": "desktop-companions.desktop",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
@@ -19,10 +19,10 @@
     "name": "CaseyMazey",
     "email": "253219934+CaseyMazey@users.noreply.github.com"
   },
-  "homepage": "https://github.com/CaseyMazey/Pets",
+  "homepage": "https://github.com/CaseyMazey/Desktop-Companions",
   "build": {
     "appId": "io.github.caseymazey.pets",
-    "productName": "Pets",
+    "productName": "Desktop Companions",
     "directories": {
       "output": "dist",
       "buildResources": "build"
@@ -34,17 +34,17 @@
     "win": {
       "target": "nsis",
       "icon": "build/icon.png",
-      "artifactName": "Pets-Setup-${version}.${ext}"
+      "artifactName": "Desktop-Companions-Setup-${version}.${ext}"
     },
     "nsis": {
       "oneClick": true,
       "perMachine": false,
       "createDesktopShortcut": "always",
       "createStartMenuShortcut": true,
-      "shortcutName": "Pets",
+      "shortcutName": "Desktop Companions",
       "runAfterFinish": true,
       "deleteAppDataOnUninstall": false,
-      "artifactName": "Pets-Setup-${version}.${ext}"
+      "artifactName": "Desktop-Companions-Setup-${version}.${ext}"
     },
     "mac": {
       "target": [
@@ -59,11 +59,11 @@
       "extendInfo": {
         "LSUIElement": true
       },
-      "artifactName": "Pets-mac-${arch}-${version}.${ext}"
+      "artifactName": "Desktop-Companions-mac-${arch}-${version}.${ext}"
     },
     "dmg": {
-      "title": "Pets",
-      "artifactName": "Pets-mac-${arch}-${version}.${ext}"
+      "title": "Desktop Companions",
+      "artifactName": "Desktop-Companions-mac-${arch}-${version}.${ext}"
     },
     "linux": {
       "target": [
@@ -72,14 +72,14 @@
       ],
       "icon": "build/icon.png",
       "category": "Utility",
-      "executableName": "pets",
-      "synopsis": "Bildschirm-Pets für NEXUS, DAN und Nook",
-      "description": "Pets – kleine Bildschirm-Begleiter, die immer im Vordergrund bleiben, erinnern, gratulieren und miteinander plaudern.",
-      "artifactName": "Pets-linux-${arch}-${version}.${ext}",
+      "executableName": "desktop-companions",
+      "synopsis": "Bildschirm-Begleiter für NEXUS, DAN und Nook",
+      "description": "Desktop Companions – kleine Bildschirm-Begleiter, die immer im Vordergrund bleiben, erinnern, gratulieren und miteinander plaudern.",
+      "artifactName": "Desktop-Companions-linux-${arch}-${version}.${ext}",
       "syncDesktopName": true
     },
     "deb": {
-      "packageName": "pets-desktop",
+      "packageName": "desktop-companions",
       "depends": [
         "libgtk-3-0t64 | libgtk-3-0",
         "libnotify4",

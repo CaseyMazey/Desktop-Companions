@@ -1,4 +1,4 @@
-// Pets – Hauptprozess: ein durchsichtiges, immer sichtbares Fenster pro Pet, Tray-Menue, Einstellungen,
+// Desktop Companions – Hauptprozess: ein durchsichtiges, immer sichtbares Fenster pro Pet, Tray-Menue, Einstellungen,
 // Erinnerungen, Gespraeche zwischen benachbarten Pets und der lokale Empfaenger fuer NEXUS & Co.
 const { app, BrowserWindow, ipcMain, screen, Menu, Tray, nativeImage, shell, dialog, desktopCapturer } = require('electron');
 const path = require('node:path');
@@ -9,7 +9,6 @@ const { APPS, SPECIES, BEAU } = require('./presets');
 const { createPet, normalizePet, normalizeState, dueReminder, pickMessage, neighborPairs, chatterDelay, freeSpot, KINDS } = require('./logic');
 const { pickDialogue } = require('./dialogues');
 const { startBridge, PORT } = require('./bridge');
-const { iconPng } = require('./icon');
 
 const SMOKE = process.argv.includes('--smoke');
 if (SMOKE) app.setPath('userData', path.join(os.tmpdir(), `pets-smoke-${Date.now()}`));
@@ -21,7 +20,8 @@ if (process.platform === 'linux') app.commandLine.appendSwitch('enable-transpare
 const W = 260;                                 // Fensterbreite (Platz fuer die Sprechblase)
 const BUBBLE_H = 120;                           // Hoehe ueber dem Pet fuer die Sprechblase
 const winHeight = (pet) => BUBBLE_H + Math.round(pet.size * 1.15) + 8;
-const icon = nativeImage.createFromBuffer(iconPng(32));
+const icon = nativeImage.createFromPath(path.join(__dirname, 'assets', 'icon.png'));
+const trayIcon = icon.resize({ width: 32, height: 32, quality: 'best' });
 
 let state = null;
 let tray = null;
@@ -35,7 +35,19 @@ const log = (...a) => console.log(...a);
 
 // ---------- Speichern ----------
 const file = () => path.join(app.getPath('userData'), 'pets.json');
+// Umzug: bis 0.2.0 hiess die App "Pets" und speicherte in %APPDATA%\Pets (bzw. ~/Library/Application Support/Pets)
+function migrateFromPets() {
+  if (SMOKE || fs.existsSync(file())) return;
+  const old = path.join(app.getPath('appData'), 'Pets', 'pets.json');
+  try {
+    if (!fs.existsSync(old)) return;
+    fs.mkdirSync(path.dirname(file()), { recursive: true });
+    fs.copyFileSync(old, file());
+    log('[umzug] Pets-Daten uebernommen aus', old);
+  } catch (e) { log('[umzug]', e.message); }
+}
 function load() {
+  migrateFromPets();
   try { state = normalizeState(JSON.parse(fs.readFileSync(file(), 'utf8'))); } catch { state = normalizeState({}); }
 }
 let saveTimer = null;
@@ -388,7 +400,7 @@ function removePet(id) {
 function openSettings(focusId) {
   if (settingsWin && !settingsWin.isDestroyed()) { settingsWin.show(); settingsWin.focus(); if (focusId) settingsWin.webContents.send('settings:focus', focusId); return; }
   settingsWin = new BrowserWindow({
-    width: 940, height: 680, minWidth: 720, minHeight: 500, title: 'Pets – Einstellungen', icon, autoHideMenuBar: true, show: false,
+    width: 940, height: 680, minWidth: 720, minHeight: 500, title: 'Desktop Companions – Einstellungen', icon, autoHideMenuBar: true, show: false,
     backgroundColor: '#1d1b26',
     webPreferences: { preload: path.join(__dirname, 'settings', 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true },
   });
@@ -473,7 +485,7 @@ app.on('window-all-closed', () => { /* Pets laufen im Tray weiter */ });
 
 app.whenReady().then(() => {
   if (process.platform === 'win32') app.setAppUserModelId('io.github.caseymazey.pets');
-  if (process.platform === 'darwin' && app.dock) app.dock.hide(); // Pets leben in der Menueleiste, nicht im Dock
+  if (process.platform === 'darwin' && app.dock) app.dock.hide(); // lebt in der Menueleiste, nicht im Dock
   load();
   if (state.settings.firstRun && !state.pets.length) {
     // Erster Start: je ein Pet fuer jede gefundene App, nebeneinander (damit sie gleich plaudern koennen)
@@ -486,8 +498,8 @@ app.whenReady().then(() => {
   if (!SMOKE) setTimeout(() => state.pets.forEach((p) => makeRoom(p)), 1500);
   // Beau begruesst dich beim Start und hebt die Pfote (Wunsch aus dem Beau-Theme)
   if (!SMOKE) setTimeout(() => state.pets.filter((p) => p.species === 'beau' && !p.muted).forEach((p) => say(p.id, beauGreeting(), { mood: 'happy', ms: 6000 })), 2500);
-  tray = new Tray(icon);
-  tray.setToolTip('Pets');
+  tray = new Tray(trayIcon);
+  tray.setToolTip('Desktop Companions');
   tray.on('click', () => openSettings());
   updateTray();
   startBridge(onAppEvent, log);

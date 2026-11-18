@@ -1,5 +1,5 @@
-# Neue Version veroeffentlichen: Version in package.json erhoehen, dann Tag v<version> pushen
-# (z.B. git tag v0.2.0 && git push --tags). Baut Pets auf Windows, macOS und Linux und legt ein
+# Desktop Companions: neue Version veroeffentlichen: Version in package.json erhoehen, dann Tag v<version> pushen
+# (z.B. git tag v0.2.0 && git push --tags). Baut Desktop Companions auf Windows, macOS und Linux und legt ein
 # GitHub-Release mit allen Installern an.
 name: Release
 
@@ -37,7 +37,7 @@ jobs:
       - run: npm run ${{ matrix.dist }}
       - uses: actions/upload-artifact@v4
         with:
-          name: pets-${{ matrix.os }}
+          name: desktop-companions-${{ matrix.os }}
           if-no-files-found: error
           path: |
             dist/*.exe
@@ -62,10 +62,10 @@ jobs:
         run: |
           VERSION="${TAG#v}"
           # Feste Namen fuer die Download-Knoepfe in der README (zeigen immer auf die neueste Version)
-          cp "out/Pets-Setup-${VERSION}.exe"               out/Pets-Setup.exe
-          cp "out/Pets-mac-arm64-${VERSION}.dmg"           out/Pets-mac-arm64.dmg
-          cp "out/Pets-mac-x64-${VERSION}.dmg"             out/Pets-mac-x64.dmg
-          cp "out/Pets-linux-x86_64-${VERSION}.AppImage"   out/Pets-linux-x86_64.AppImage
-          cp "out/Pets-linux-amd64-${VERSION}.deb"         out/Pets-linux-amd64.deb
+          cp "out/Desktop-Companions-Setup-${VERSION}.exe"               out/Desktop-Companions-Setup.exe
+          cp "out/Desktop-Companions-mac-arm64-${VERSION}.dmg"           out/Desktop-Companions-mac-arm64.dmg
+          cp "out/Desktop-Companions-mac-x64-${VERSION}.dmg"             out/Desktop-Companions-mac-x64.dmg
+          cp "out/Desktop-Companions-linux-x86_64-${VERSION}.AppImage"   out/Desktop-Companions-linux-x86_64.AppImage
+          cp "out/Desktop-Companions-linux-amd64-${VERSION}.deb"         out/Desktop-Companions-linux-amd64.deb
           ls -la out
-          gh release create "$TAG" out/* --title "Pets ${VERSION}" --generate-notes --verify-tag
+          gh release create "$TAG" out/* --title "Desktop Companions ${VERSION}" --generate-notes --verify-tag

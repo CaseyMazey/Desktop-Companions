@@ -1,20 +1,20 @@
 <p align="center">
-  <img src="build/icon.png" alt="Pets" width="96">
+  <img src="build/icon.png" alt="Desktop Companions" width="96">
 </p>
 
-<h1 align="center">Pets</h1>
+<h1 align="center">Desktop Companions</h1>
 
 <p align="center"><strong>Kleine Begleiter für deinen Bildschirm – sie erinnern, gratulieren und plaudern miteinander.</strong><br>
 <em>Immer da. Nie im Weg.</em></p>
 
 <p align="center">
-  <a href="https://github.com/CaseyMazey/Pets/releases/latest/download/Pets-Setup.exe"><img src="https://img.shields.io/badge/Windows-Download-8b7cf6?style=for-the-badge&logo=windows&logoColor=white" alt="Download für Windows"></a>
+  <a href="https://github.com/CaseyMazey/Desktop-Companions/releases/latest/download/Desktop-Companions-Setup.exe"><img src="https://img.shields.io/badge/Windows-Download-8b7cf6?style=for-the-badge&logo=windows&logoColor=white" alt="Download für Windows"></a>
   <a href="#macos"><img src="https://img.shields.io/badge/macOS-Download-8b7cf6?style=for-the-badge&logo=apple&logoColor=white" alt="Download für macOS"></a>
   <a href="#linux"><img src="https://img.shields.io/badge/Linux-Download-8b7cf6?style=for-the-badge&logo=linux&logoColor=white" alt="Download für Linux"></a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/CaseyMazey/Pets/releases/latest"><img src="https://img.shields.io/github/v/release/CaseyMazey/Pets?label=Version&color=f4a261" alt="Neueste Version"></a>
+  <a href="https://github.com/CaseyMazey/Desktop-Companions/releases/latest"><img src="https://img.shields.io/github/v/release/CaseyMazey/Desktop-Companions?label=Version&color=f4a261" alt="Neueste Version"></a>
   <img src="https://img.shields.io/badge/System-Windows%20%7C%20macOS%20%7C%20Linux-0078d4" alt="Windows, macOS und Linux">
   <img src="https://img.shields.io/badge/Sprache-Deutsch-555" alt="Deutsch">
   <img src="https://img.shields.io/badge/passt%20zu-NEXUS%20%7C%20DAN%20%7C%20Nook-7dd3a8" alt="Passt zu NEXUS, DAN und Nook">
@@ -24,52 +24,52 @@
   <img src="docs/screenshots/pets.png" alt="Fünf Pets über der Taskleiste: ein Geist meldet einen fertigen Auftrag in NEXUS, eine Katze erinnert an DAN, ein Schleim sagt etwas Nettes, Beau winkt mit Hexenhut, ein Vogel ist einfach da" width="900">
 </p>
 
-Du vergisst beim Arbeiten, deinen Ausbildungsnachweis zu schreiben, Wasser zu trinken oder nachzusehen, ob Claude schon fertig ist? **Pets sitzen unten auf deinem Bildschirm und sagen dir Bescheid.**
+Du vergisst beim Arbeiten, deinen Ausbildungsnachweis zu schreiben, Wasser zu trinken oder nachzusehen, ob Claude schon fertig ist? **Kleine Pets sitzen unten auf deinem Bildschirm und sagen dir Bescheid.**
 
 - 🐾 **Immer im Vordergrund, nie im Weg.** Klicks neben dem Pet gehen durch, ziehen kannst du es überallhin.
 - 🔗 **Verbunden mit deiner App.** Ein Klick aufs Pet öffnet NEXUS, DAN, Nook oder jede andere App.
 - 💬 **Mehrere Pets, die miteinander reden.** Stehen zwei nebeneinander, plaudern sie ab und zu.
-- 🔒 **Ohne Konto, ohne Server.** Pets läuft komplett auf deinem Rechner.
+- 🔒 **Ohne Konto, ohne Server.** Desktop Companions läuft komplett auf deinem Rechner.
 
 ## Installieren
 
-Pets gibt es kostenlos für Windows, macOS und Linux, direkt hier von GitHub.
+Desktop Companions gibt es kostenlos für Windows, macOS und Linux, direkt hier von GitHub.
 
 ### Windows
 
-1. **[Pets-Setup.exe herunterladen](https://github.com/CaseyMazey/Pets/releases/latest/download/Pets-Setup.exe)** (Windows 10/11).
-2. Die Datei ausführen. Pets installiert sich für deinen Benutzer, ohne Admin-Rechte, mit Verknüpfung auf dem Desktop und im Startmenü, und startet gleich.
+1. **[Desktop-Companions-Setup.exe herunterladen](https://github.com/CaseyMazey/Desktop-Companions/releases/latest/download/Desktop-Companions-Setup.exe)** (Windows 10/11).
+2. Die Datei ausführen. Desktop Companions installiert sich für deinen Benutzer, ohne Admin-Rechte, mit Verknüpfung auf dem Desktop und im Startmenü, und startet gleich.
 3. Erscheint „Der Computer wurde durch Windows geschützt“: auf **Weitere Informationen → Trotzdem ausführen** klicken. Die Meldung kommt, weil das Setup nicht signiert ist.
 
-**Update:** Neue Version herunterladen und ausführen, deine Pets bleiben erhalten.
+**Update:** Neue Version herunterladen und ausführen, deine Pets bleiben erhalten. Wer noch die alte App „Pets“ hat: Der neue Installer ersetzt sie, und deine Pets ziehen automatisch mit um.
 
 ### macOS
 
 1. Herunterladen, passend zu deinem Mac (Apfel-Menü → Über diesen Mac):
-   - **[Apple Silicon (M1, M2, M3 …)](https://github.com/CaseyMazey/Pets/releases/latest/download/Pets-mac-arm64.dmg)**
-   - **[Intel](https://github.com/CaseyMazey/Pets/releases/latest/download/Pets-mac-x64.dmg)**
-2. Die `.dmg` öffnen und **Pets in den Ordner „Programme“ ziehen**.
+   - **[Apple Silicon (M1, M2, M3 …)](https://github.com/CaseyMazey/Desktop-Companions/releases/latest/download/Desktop-Companions-mac-arm64.dmg)**
+   - **[Intel](https://github.com/CaseyMazey/Desktop-Companions/releases/latest/download/Desktop-Companions-mac-x64.dmg)**
+2. Die `.dmg` öffnen und **Desktop Companions in den Ordner „Programme“ ziehen**.
 3. **Beim ersten Öffnen** blockiert macOS die App, weil sie nicht über ein kostenpflichtiges Apple-Entwicklerkonto signiert ist:
-   - **Rechtsklick** auf Pets → **Öffnen** → **Öffnen**.
-   - Klappt das nicht (macOS 15 und neuer): **Systemeinstellungen → Datenschutz & Sicherheit**, nach unten scrollen, bei Pets auf **„Dennoch öffnen“** klicken.
-   - Meldet macOS, die App sei **„beschädigt“**: Terminal öffnen und `xattr -dr com.apple.quarantine /Applications/Pets.app` eingeben.
+   - **Rechtsklick** auf Desktop Companions → **Öffnen** → **Öffnen**.
+   - Klappt das nicht (macOS 15 und neuer): **Systemeinstellungen → Datenschutz & Sicherheit**, nach unten scrollen, bei Desktop Companions auf **„Dennoch öffnen“** klicken.
+   - Meldet macOS, die App sei **„beschädigt“**: Terminal öffnen und `xattr -dr com.apple.quarantine "/Applications/Desktop Companions.app"` eingeben.
 
-Pets erscheint unter macOS nicht im Dock, sondern als Symbol in der Menüleiste.
+Desktop Companions erscheint unter macOS nicht im Dock, sondern als Symbol in der Menüleiste.
 
 ### Linux
 
-- **Debian, Ubuntu, Mint …:** **[Pets-linux-amd64.deb](https://github.com/CaseyMazey/Pets/releases/latest/download/Pets-linux-amd64.deb)** herunterladen und installieren:
+- **Debian, Ubuntu, Mint …:** **[Desktop-Companions-linux-amd64.deb](https://github.com/CaseyMazey/Desktop-Companions/releases/latest/download/Desktop-Companions-linux-amd64.deb)** herunterladen und installieren:
   ```bash
-  sudo apt install ./Pets-linux-amd64.deb
+  sudo apt install ./Desktop-Companions-linux-amd64.deb
   ```
-- **Alle anderen (Fedora, Arch …):** **[Pets-linux-x86_64.AppImage](https://github.com/CaseyMazey/Pets/releases/latest/download/Pets-linux-x86_64.AppImage)** herunterladen, ausführbar machen und starten:
+- **Alle anderen (Fedora, Arch …):** **[Desktop-Companions-linux-x86_64.AppImage](https://github.com/CaseyMazey/Desktop-Companions/releases/latest/download/Desktop-Companions-linux-x86_64.AppImage)** herunterladen, ausführbar machen und starten:
   ```bash
-  chmod +x Pets-linux-x86_64.AppImage && ./Pets-linux-x86_64.AppImage
+  chmod +x Desktop-Companions-linux-x86_64.AppImage && ./Desktop-Companions-linux-x86_64.AppImage
   ```
 
 Unter Linux gehen Klicks direkt neben dem Pet nicht zum Fenster dahinter durch (das unterstützt Linux für durchsichtige Fenster nicht).
 
-## So benutzt du Pets
+## So benutzt du Desktop Companions
 
 | Aktion | Was passiert |
 |---|---|
@@ -79,7 +79,7 @@ Unter Linux gehen Klicks direkt neben dem Pet nicht zum Fenster dahinter durch (
 | **Rechtsklick** | Menü: Sag was, Schlafen legen, Herumlaufen, Einstellungen, Entfernen |
 | **Tray-Symbol** | neues Pet, Einstellungen, Pets verstecken, Beenden |
 
-Beim ersten Start legt Pets für jede gefundene App (NEXUS, DAN, Nook) ein eigenes Pet an.
+Beim ersten Start legt Desktop Companions für jede gefundene App (NEXUS, DAN, Nook) ein eigenes Pet an.
 
 ## Voreinstellungen
 
@@ -107,7 +107,7 @@ npm start
 
 ### Schnittstelle für andere Apps
 
-Pets lauscht auf `http://127.0.0.1:47811` (nur dieser Rechner). Jede App kann ihrem Pet etwas sagen lassen:
+Desktop Companions lauscht auf `http://127.0.0.1:47811` (nur dieser Rechner). Jede App kann ihrem Pet etwas sagen lassen:
 
 ```
 POST /event
