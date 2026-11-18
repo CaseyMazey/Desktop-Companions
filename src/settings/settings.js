@@ -163,6 +163,25 @@ async function changeKind() {
   renderEditor();
 }
 
+// ---------- Updates ----------
+function renderUpdate() {
+  const u = data.update || { status: 'off' };
+  $('version').textContent = `Version ${data.version}`;
+  const text = {
+    off: data.packaged ? 'Updates sind aus.' : 'Updates gibt es nur in der installierten App.',
+    idle: '', checking: 'Suche nach Updates …', none: 'Du hast die neueste Version.',
+    downloading: `Update ${u.version || ''} wird geladen … ${u.percent || 0} %`,
+    ready: `Update ${u.version} ist bereit.`,
+    available: `Version ${u.version} ist da (zum Herunterladen).`,
+    error: 'Update-Suche fehlgeschlagen. Später nochmal probieren.',
+  }[u.status] ?? '';
+  $('update-status').textContent = text;
+  const btn = $('update-btn');
+  btn.textContent = u.status === 'ready' ? 'Jetzt neu starten und installieren' : u.status === 'available' ? 'Herunterladen …' : 'Nach Updates suchen';
+  btn.className = u.status === 'ready' ? 'primary' : '';
+  btn.disabled = u.status === 'off' || u.status === 'checking' || u.status === 'downloading';
+}
+
 async function init() {
   data = await api.get();
   const q = new URLSearchParams(window.location.search).get('focus');
@@ -181,12 +200,21 @@ async function init() {
     data = await api.get();
     select(p.id);
   };
+  $('auto-update').checked = data.state.settings.autoUpdate;
+  $('auto-update').disabled = !data.packaged;
+  $('auto-update').onchange = () => api.saveGlobal({ autoUpdate: $('auto-update').checked });
+  $('update-btn').onclick = () => {
+    const s = (data.update || {}).status;
+    if (s === 'ready' || s === 'available') api.updateInstall(); else api.updateCheck();
+  };
+  renderUpdate();
   renderList();
   renderEditor();
 }
 
 api.onState((s) => {
   data = s;
+  renderUpdate();
   if (!pet()) current = data.state.pets[0] ? data.state.pets[0].id : null;
   renderList();
   renderEditor();

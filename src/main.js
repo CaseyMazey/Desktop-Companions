@@ -9,6 +9,7 @@ const { APPS, SPECIES, BEAU } = require('./presets');
 const { createPet, normalizePet, normalizeState, dueReminder, pickMessage, neighborPairs, chatterDelay, freeSpot, KINDS } = require('./logic');
 const { pickDialogue } = require('./dialogues');
 const { startBridge, PORT } = require('./bridge');
+const { Updater } = require('./updater');
 
 const SMOKE = process.argv.includes('--smoke');
 if (SMOKE) app.setPath('userData', path.join(os.tmpdir(), `pets-smoke-${Date.now()}`));
@@ -418,6 +419,8 @@ function settingsPayload() {
     species: Object.fromEntries(Object.entries(SPECIES).map(([k, v]) => [k, v.label])),
     port: PORT,
     packaged: app.isPackaged,
+    version: app.getVersion(),
+    update: updater ? updater.state : { status: 'off' },
   };
 }
 ipcMain.handle('settings:get', () => settingsPayload());
@@ -452,6 +455,45 @@ ipcMain.handle('settings:pick-file', async () => {
   return r.canceled ? null : r.filePaths[0];
 });
 
+ipcMain.handle('settings:update-check', () => (updater ? updater.check(true) : { status: 'off' }));
+ipcMain.handle('settings:update-install', () => { if (updater) updater.install(); });
+
+// ---------- Updates (wie bei NEXUS) ----------
+const RELEASES = 'https://github.com/CaseyMazey/Desktop-Companions/releases/latest';
+let updater = null;
+const asked = new Set(); // pro Version nur einmal fragen
+function onUpdateState(s) {
+  updateTray();
+  sendSettings();
+  if (s.status === 'ready' && !asked.has(s.version)) {
+    asked.add(s.version);
+    const first = state.pets.find((p) => !p.muted);
+    if (first) say(first.id, `🎁 Update auf ${s.version} ist bereit!`, { mood: 'happy', ms: 9000 });
+    dialog.showMessageBox({
+      type: 'info', title: 'Desktop Companions', icon,
+      message: `Desktop Companions ${s.version} ist bereit.`,
+      detail: 'Jetzt neu starten, um das Update zu installieren? Sonst wird es beim nächsten Beenden installiert.',
+      buttons: ['Jetzt neu starten', 'Später'], defaultId: 0, cancelId: 1, noLink: true,
+    }).then((r) => { if (r.response === 0) updater.install(); });
+  }
+  if (s.status === 'available' && !asked.has(s.version)) {
+    asked.add(s.version);
+    dialog.showMessageBox({
+      type: 'info', title: 'Desktop Companions', icon,
+      message: `Desktop Companions ${s.version} ist da.`,
+      detail: 'Auf diesem System kann sich die App nicht selbst aktualisieren. Die neue Version auf GitHub herunterladen?',
+      buttons: ['Herunterladen', 'Später'], defaultId: 0, cancelId: 1, noLink: true,
+    }).then((r) => { if (r.response === 0) updater.install(); });
+  }
+}
+function updateMenuItem() {
+  const s = updater ? updater.state : { status: 'off' };
+  if (s.status === 'ready') return { label: `Update auf ${s.version} installieren (neu starten)`, click: () => updater.install() };
+  if (s.status === 'available') return { label: `Version ${s.version} herunterladen …`, click: () => updater.install() };
+  if (s.status === 'downloading') return { label: `Update wird geladen … ${s.percent || 0} %`, enabled: false };
+  return { label: 'Nach Updates suchen', enabled: s.status !== 'off' && s.status !== 'checking', click: () => updater.check(true) };
+}
+
 function applyAutostart() {
   if (!app.isPackaged) return; // aus dem Quellcode gestartet: kein Autostart fuer electron.exe eintragen
   app.setLoginItemSettings({ openAtLogin: state.settings.autostart });
@@ -470,6 +512,7 @@ function updateTray() {
     { label: 'Plaudern lassen', enabled: state.pets.length > 1, click: () => maybeChat(true) },
     { label: 'Einstellungen …', click: () => openSettings() },
     { type: 'separator' },
+    updateMenuItem(),
     { label: 'Beenden', click: () => app.quit() },
   ]));
 }
@@ -503,6 +546,11 @@ app.whenReady().then(() => {
   tray.on('click', () => openSettings());
   updateTray();
   startBridge(onAppEvent, log);
+  updater = new Updater({
+    enabled: app.isPackaged && !SMOKE, releasesUrl: RELEASES, log,
+    isEnabledSetting: () => state.settings.autoUpdate !== false, onState: onUpdateState,
+  });
+  updater.start();
   setInterval(checkReminders, 30000);
   setInterval(() => maybeChat(), 12000);
   setInterval(maybeWander, 9000);

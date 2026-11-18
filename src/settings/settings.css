@@ -21,6 +21,8 @@ main { flex: 1; overflow: auto; padding: 22px 28px; }
 .add { display: flex; gap: 6px; }
 .add select { flex: 1; min-width: 0; }
 .global { border-top: 1px solid var(--line); padding-top: 12px; display: flex; flex-direction: column; gap: 8px; margin-top: auto; }
+.updates { border-top: 1px solid var(--line); padding-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+.updates .hint { margin: 0; }
 button, select, input, textarea { font: inherit; color: var(--text); background: #1b1925; border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; }
 button { cursor: pointer; background: #322d45; }
 button:hover { border-color: var(--accent); }

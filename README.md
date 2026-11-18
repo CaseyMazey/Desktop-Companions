@@ -41,7 +41,7 @@ Desktop Companions gibt es kostenlos für Windows, macOS und Linux, direkt hier 
 2. Die Datei ausführen. Desktop Companions installiert sich für deinen Benutzer, ohne Admin-Rechte, mit Verknüpfung auf dem Desktop und im Startmenü, und startet gleich.
 3. Erscheint „Der Computer wurde durch Windows geschützt“: auf **Weitere Informationen → Trotzdem ausführen** klicken. Die Meldung kommt, weil das Setup nicht signiert ist.
 
-**Update:** Neue Version herunterladen und ausführen, deine Pets bleiben erhalten. Wer noch die alte App „Pets“ hat: Der neue Installer ersetzt sie, und deine Pets ziehen automatisch mit um.
+**Updates kommen automatisch** (ab Version 0.4.0): Desktop Companions lädt neue Versionen im Hintergrund und fragt, ob es gleich neu starten soll, sonst wird beim Beenden installiert. Von Hand: Tray → *Nach Updates suchen*. Deine Pets bleiben erhalten. Wer noch die alte App „Pets“ oder eine Version vor 0.4.0 hat, installiert einmal von Hand neu; der Installer ersetzt die alte App, und deine Pets ziehen mit um.
 
 ### macOS
 

@@ -41,10 +41,14 @@ jobs:
           if-no-files-found: error
           path: |
             dist/*.exe
+            dist/*.blockmap
+            dist/*.yml
             dist/*.dmg
             dist/*.zip
             dist/*.AppImage
             dist/*.deb
+            !dist/builder-debug.yml
+            !dist/builder-effective-config.yaml
 
   release:
     needs: build

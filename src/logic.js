@@ -66,6 +66,7 @@ function normalizeState(s) {
     settings: {
       chatter: ['aus', 'selten', 'normal', 'oft'].includes(g.chatter) ? g.chatter : 'normal',
       autostart: !!g.autostart,
+      autoUpdate: g.autoUpdate !== false,
       firstRun: g.firstRun !== false,
     },
   };

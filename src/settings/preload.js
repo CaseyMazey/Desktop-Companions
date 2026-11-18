@@ -11,6 +11,8 @@ contextBridge.exposeInMainWorld('pets', {
   chatNow: () => ipcRenderer.invoke('settings:chat-now'),
   saveGlobal: (g) => ipcRenderer.invoke('settings:save-global', g),
   pickFile: () => ipcRenderer.invoke('settings:pick-file'),
+  updateCheck: () => ipcRenderer.invoke('settings:update-check'),
+  updateInstall: () => ipcRenderer.invoke('settings:update-install'),
   onState: (cb) => ipcRenderer.on('settings:state', (_e, s) => cb(s)),
   onFocus: (cb) => ipcRenderer.on('settings:focus', (_e, id) => cb(id)),
 });
