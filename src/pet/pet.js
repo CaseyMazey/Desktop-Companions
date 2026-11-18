@@ -116,10 +116,14 @@ petEl.addEventListener('pointerup', (e) => {
   if (e.button !== 0) return;
   api.dragEnd();
 });
+// Maus "verloren" (z. B. losgelassen ausserhalb, Monitorwechsel): Ziehen sicher beenden
+petEl.addEventListener('lostpointercapture', () => api.dragEnd());
 petEl.addEventListener('contextmenu', (e) => { e.preventDefault(); api.context(); });
 
 // ---------- Nachrichten vom Hauptprozess ----------
 api.on('pet:update', applyPet);
+// Hauptprozess hat die Klick-Sperre geloest (Maus war nicht mehr ueber dem Fenster)
+api.on('pet:hover-reset', () => { over = false; });
 api.on('pet:say', showBubble);
 // Stimmung kurz zeigen: 'happy' oder { mood: 'sleep', ms: 3500 } (Aktionen in Szenen)
 api.on('pet:mood', (m) => (typeof m === 'object' ? flash(m.mood, m.ms || 1600) : flash(m, 1600)));

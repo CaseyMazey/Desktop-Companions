@@ -13,6 +13,8 @@ const { Updater } = require('./updater');
 
 const SMOKE = process.argv.includes('--smoke');
 if (SMOKE) app.setPath('userData', path.join(os.tmpdir(), `pets-smoke-${Date.now()}`));
+// Fuer Tests: eigener Datenordner, damit eine installierte Desktop-Companions-Instanz unberuehrt bleibt
+else if (process.env.PETS_USERDATA) app.setPath('userData', process.env.PETS_USERDATA);
 if (!SMOKE && !app.requestSingleInstanceLock()) app.quit();
 
 // Klicks neben dem Pet durchlassen geht nur unter Windows und macOS (Linux kennt kein "forward")
@@ -38,7 +40,7 @@ const log = (...a) => console.log(...a);
 const file = () => path.join(app.getPath('userData'), 'pets.json');
 // Umzug: bis 0.2.0 hiess die App "Pets" und speicherte in %APPDATA%\Pets (bzw. ~/Library/Application Support/Pets)
 function migrateFromPets() {
-  if (SMOKE || fs.existsSync(file())) return;
+  if (SMOKE || process.env.PETS_USERDATA || fs.existsSync(file())) return;
   const old = path.join(app.getPath('appData'), 'Pets', 'pets.json');
   try {
     if (!fs.existsSync(old)) return;
@@ -96,22 +98,32 @@ function createPetWindow(pet) {
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   win.loadFile(path.join(__dirname, 'pet', 'pet.html'), { query: { id: pet.id } });
   win.webContents.on('did-finish-load', () => { const p = petById(pet.id); if (p) win.webContents.send('pet:update', publicPet(p)); });
-  win.once('ready-to-show', () => { if (!hidden) win.showInactive(); });
+  // bei Skalierung (125 %, 150 %) legt Windows das Fenster schon ein paar Pixel zu gross an: einmal richtig setzen
+  win.once('ready-to-show', () => { placeWin(pet.id, pet.x, pet.y); if (!hidden) win.showInactive(); });
   win.webContents.on('will-navigate', (e) => e.preventDefault());
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
-  const entry = { win, mem: {}, busyUntil: 0, dragging: null, walking: null, inTalk: false };
+  const entry = { win, mem: {}, busyUntil: 0, dragging: null, walking: null, inTalk: false, pos: { x: pet.x, y: pet.y }, capturing: false };
   live.set(pet.id, entry);
   win.on('closed', () => { if (live.get(pet.id) === entry) live.delete(pet.id); });
   return entry;
 }
+// Position immer selbst merken und Groesse mitsetzen: Windows rundet bei Skalierung (z. B. 125 %) sonst bei
+// jedem Verschieben anders, die Fenster wachsen oder sinken, und die Pets landen woanders als gewollt.
+function placeWin(id, x, y) {
+  const e = live.get(id);
+  const pet = petById(id);
+  if (!e || !pet || e.win.isDestroyed()) return;
+  e.pos = { x: Math.round(x), y: Math.round(y) };
+  e.win.setBounds({ x: e.pos.x, y: e.pos.y, width: W, height: winHeight(pet) });
+}
+const posOf = (id) => { const e = live.get(id); return e ? [e.pos.x, e.pos.y] : [0, 0]; };
 const send = (id, ch, ...args) => { const e = live.get(id); if (e && !e.win.isDestroyed()) e.win.webContents.send(ch, ...args); };
 const entryOf = (wc) => { for (const [id, e] of live) if (!e.win.isDestroyed() && e.win.webContents === wc) return [id, e]; return [null, null]; };
 
 function refreshPet(pet) {
   const e = live.get(pet.id);
   if (!e) return createPetWindow(pet);
-  const [x, y] = e.win.getPosition();
-  e.win.setBounds({ x, y, width: W, height: winHeight(pet) });
+  placeWin(pet.id, e.pos.x, e.pos.y);
   send(pet.id, 'pet:update', publicPet(pet));
 }
 const publicPet = (p) => ({ id: p.id, name: p.name, species: p.species, color: p.color, size: p.size, muted: p.muted, kind: p.kind });
@@ -143,22 +155,23 @@ async function openApp(pet) {
 // ---------- Ziehen & Klicken ----------
 ipcMain.on('pet:hover', (ev, over) => {
   const [, e] = entryOf(ev.sender);
-  if (e && !e.dragging && CLICK_THROUGH) e.win.setIgnoreMouseEvents(!over, { forward: true });
+  if (e && !e.dragging && CLICK_THROUGH) { e.win.setIgnoreMouseEvents(!over, { forward: true }); e.capturing = over; }
 });
 ipcMain.on('pet:drag-start', (ev) => {
   const [id, e] = entryOf(ev.sender);
   if (!e) return;
   stopWalk(id);
   const c = screen.getCursorScreenPoint();
-  const [wx, wy] = e.win.getPosition();
+  const [wx, wy] = posOf(id);
   e.dragging = { cx: c.x, cy: c.y, wx, wy, t: Date.now(), moved: 0 };
   e.win.setIgnoreMouseEvents(false);
+  e.capturing = true;
   e.dragTimer = setInterval(() => {
     const p = screen.getCursorScreenPoint();
     const d = e.dragging;
     if (!d || e.win.isDestroyed()) return;
     d.moved = Math.max(d.moved, Math.abs(p.x - d.cx) + Math.abs(p.y - d.cy));
-    if (d.moved > 4) { send(id, 'pet:dragging', true); e.win.setPosition(Math.round(d.wx + p.x - d.cx), Math.round(d.wy + p.y - d.cy)); }
+    if (d.moved > 4) { send(id, 'pet:dragging', true); placeWin(id, d.wx + p.x - d.cx, d.wy + p.y - d.cy); }
   }, 12);
 });
 ipcMain.on('pet:drag-end', (ev) => {
@@ -171,9 +184,9 @@ ipcMain.on('pet:drag-end', (ev) => {
   const pet = petById(id);
   if (!pet) return;
   if (d.moved <= 4) { openApp(pet); return; }
-  const [x, y] = e.win.getPosition();
+  const [x, y] = posOf(id);
   const c = clampToScreen(pet, x, y);
-  e.win.setPosition(c.x, c.y);
+  placeWin(id, c.x, c.y);
   Object.assign(pet, c);
   pet.homeX = c.x; // hier wurde es abgesetzt
   save();
@@ -195,7 +208,7 @@ ipcMain.on('pet:context', (ev) => {
     ...(pet.target ? [{ label: `${APPS[pet.kind].label === 'Keine' ? 'App' : APPS[pet.kind].label} öffnen`, click: () => openApp(pet) }] : []),
     { label: 'Sag was!', click: () => speakNow(pet) },
     { label: pet.muted ? 'Aufwecken' : 'Schlafen legen (keine Erinnerungen)', click: () => { pet.muted = !pet.muted; save(); refreshPet(pet); if (!pet.muted) say(pet.id, 'Bin wieder wach! ☀️', { mood: 'happy' }); } },
-    { label: 'Frei herumwandern', type: 'checkbox', checked: pet.wander, click: () => { pet.wander = !pet.wander; if (!pet.wander) pet.homeX = live.get(pet.id).win.getPosition()[0]; save(); updateTray(); sendSettings(); } },
+    { label: 'Frei herumwandern', type: 'checkbox', checked: pet.wander, click: () => { pet.wander = !pet.wander; if (!pet.wander) pet.homeX = posOf(pet.id)[0]; save(); updateTray(); sendSettings(); } },
     { type: 'separator' },
     { label: 'Einstellungen …', click: () => openSettings(pet.id) },
     { label: 'Pet entfernen', click: () => removePet(pet.id) },
@@ -223,7 +236,7 @@ function othersOf(id) {
   for (const p of state.pets) {
     const e = live.get(p.id);
     if (p.id === id || !e || e.dragging || e.win.isDestroyed()) continue;
-    const [x, y] = e.win.getPosition();
+    const [x, y] = posOf(p.id);
     out.push({ cx: (e.walkTarget ?? x) + W / 2, bottom: y + winHeight(p), size: p.size });
   }
   return out;
@@ -245,7 +258,7 @@ function walkTo(pet, targetX, speed = 1.5, { setHome = false } = {}) {
   const e = live.get(pet.id);
   if (!e) return;
   stopWalk(pet.id);
-  const [x, y] = e.win.getPosition();
+  const [x, y] = posOf(pet.id);
   let dir = Math.sign(targetX - x);
   targetX = freeX(pet, targetX, y, dir);
   dir = Math.sign(targetX - x);
@@ -256,7 +269,7 @@ function walkTo(pet, targetX, speed = 1.5, { setHome = false } = {}) {
   e.walking = setInterval(() => {
     if (e.win.isDestroyed()) return stopWalk(pet.id);
     cx += dir * speed;
-    e.win.setPosition(Math.round(cx), y);
+    placeWin(pet.id, cx, y); // nur waagerecht: y bleibt fest
     if ((dir > 0 && cx >= e.walkTarget) || (dir < 0 && cx <= e.walkTarget)) {
       // ist inzwischen jemand anderes dort stehen geblieben? dann noch ein Stueck weiter
       e.walkTarget = null;
@@ -273,7 +286,7 @@ function walkTo(pet, targetX, speed = 1.5, { setHome = false } = {}) {
 function makeRoom(pet, prefer = 0) {
   const e = live.get(pet.id);
   if (!e || e.dragging || e.walking) return;
-  const [x, y] = e.win.getPosition();
+  const [x, y] = posOf(pet.id);
   const nx = freeX(pet, x, y, prefer);
   if (nx !== x) walkTo(pet, nx, 2.5, { setHome: true });
 }
@@ -285,7 +298,7 @@ function maybeWander() {
     const e = live.get(pet.id);
     if (!e || e.dragging || e.walking || e.inTalk) continue;
     if (pet.muted || Date.now() < e.busyUntil || Math.random() > (pet.wander ? 0.18 : 0.14)) { makeRoom(pet); continue; }
-    const [x, y] = e.win.getPosition();
+    const [x, y] = posOf(pet.id);
     const [min, max] = xRange(pet, x, y);
     const target = strollTarget(pet, x, min, max);
     if (Math.abs(target - x) < 8) continue;
@@ -306,7 +319,7 @@ async function runScene(groupIds) {
   const cast = scene.ids.filter((id) => live.has(id));
   talking = true;
   // alle Beteiligten schauen zur Mitte der Gruppe
-  const cx = (id) => live.get(id).win.getPosition()[0];
+  const cx = (id) => posOf(id)[0];
   const mid = cast.reduce((s, id) => s + cx(id), 0) / cast.length;
   for (const id of cast) { const e = live.get(id); e.inTalk = true; stopWalk(id); send(id, 'pet:face', Math.sign(mid - cx(id))); }
   try {
@@ -331,7 +344,7 @@ function maybeChat(force = false) {
   for (const pet of state.pets) {
     const e = live.get(pet.id);
     if (!e || pet.muted || e.dragging || Date.now() < e.busyUntil) continue;
-    const [x, y] = e.win.getPosition();
+    const [x, y] = posOf(pet.id);
     const h = winHeight(pet);
     bounds.push({ id: pet.id, x, y: y + BUBBLE_H, width: W, height: h - BUBBLE_H });
   }
@@ -444,7 +457,7 @@ ipcMain.handle('settings:save-pet', (_e, data) => {
   if (!old) return null;
   const pet = normalizePet({ ...old, ...data, id: old.id, x: old.x, y: old.y });
   // Wandern ausgeschaltet: ab jetzt in der Naehe des aktuellen Platzes bleiben
-  if (old.wander && !pet.wander && live.get(pet.id)) pet.homeX = live.get(pet.id).win.getPosition()[0];
+  if (old.wander && !pet.wander && live.get(pet.id)) pet.homeX = posOf(pet.id)[0];
   state.pets[state.pets.indexOf(old)] = pet;
   save();
   refreshPet(pet);
@@ -533,7 +546,7 @@ function setAllWander(on) {
   for (const p of state.pets) {
     p.wander = on;
     const e = live.get(p.id);
-    if (!on && e) p.homeX = e.win.getPosition()[0]; // ab jetzt in der Naehe des aktuellen Platzes bleiben
+    if (!on && e) p.homeX = e.pos.x; // ab jetzt in der Naehe des aktuellen Platzes bleiben
   }
   save();
   updateTray();
@@ -543,6 +556,54 @@ function toggleHidden() {
   hidden = !hidden;
   for (const e of live.values()) hidden ? e.win.hide() : e.win.showInactive();
   updateTray();
+}
+
+// ---------- Monitore ----------
+// Nach dem Ab- oder Anstecken eines Monitors (oder anderer Skalierung) verschiebt Windows die Fenster selbst und
+// rechnet sie um; danach lassen durchsichtige Fenster Klicks oft nicht mehr richtig durch. Deshalb: kurz warten,
+// bis Windows fertig ist, dann jedes Pet auf einen vorhandenen Bildschirm setzen und sein Fenster neu bauen.
+let rebuildTimer = null;
+function scheduleRebuild() {
+  clearTimeout(rebuildTimer);
+  rebuildTimer = setTimeout(rebuildAll, 800);
+}
+function rebuildAll() {
+  for (const pet of state.pets) {
+    const e = live.get(pet.id);
+    if (e) {
+      stopWalk(pet.id);
+      clearInterval(e.dragTimer);
+      Object.assign(pet, { x: e.pos.x, y: e.pos.y });
+      live.delete(pet.id);
+      e.win.destroy();
+    }
+    Object.assign(pet, clampToScreen(pet, pet.x, pet.y));
+    if (!pet.wander) pet.homeX = pet.x;
+    createPetWindow(pet);
+  }
+  talking = false;
+  save();
+  log('[monitore] Pet-Fenster neu aufgebaut:', screen.getAllDisplays().map((d) => `${d.bounds.width}x${d.bounds.height}@${d.scaleFactor}`).join(', '));
+}
+// Sicherheitsnetz: faengt ein Pet-Fenster Klicks, obwohl die Maus gar nicht darueber ist, wieder durchlassen
+function releaseStuckClicks() {
+  const c = screen.getCursorScreenPoint();
+  for (const [id, e] of live) {
+    // gewachsen oder verrutscht (Windows-Skalierung)? zurueck auf gemerkte Position und Groesse
+    if (!e.win.isDestroyed() && !e.dragging) {
+      const b = e.win.getBounds();
+      const p = petById(id);
+      if (p && (Math.abs(b.width - W) > 2 || Math.abs(b.height - winHeight(p)) > 2 || Math.abs(b.x - e.pos.x) > 2 || Math.abs(b.y - e.pos.y) > 2)) placeWin(id, e.pos.x, e.pos.y);
+    }
+    if (!CLICK_THROUGH) continue;
+    if (!e.capturing || e.dragging || e.win.isDestroyed()) continue;
+    const pet = petById(id);
+    const inside = pet && c.x >= e.pos.x && c.x < e.pos.x + W && c.y >= e.pos.y && c.y < e.pos.y + winHeight(pet);
+    if (inside) continue;
+    e.win.setIgnoreMouseEvents(true, { forward: true });
+    e.capturing = false;
+    send(id, 'pet:hover-reset');
+  }
 }
 
 // ---------- Start ----------
@@ -577,7 +638,8 @@ app.whenReady().then(() => {
   setInterval(checkReminders, 30000);
   setInterval(() => maybeChat(), 12000);
   setInterval(maybeWander, 9000);
-  screen.on('display-removed', () => { for (const p of state.pets) refreshPet(Object.assign(p, clampToScreen(p, p.x, p.y))); });
+  for (const ev of ['display-removed', 'display-added', 'display-metrics-changed']) screen.on(ev, scheduleRebuild);
+  setInterval(releaseStuckClicks, 300);
   if (SMOKE) runSmoke();
 });
 
@@ -589,7 +651,7 @@ async function runSmoke() {
   const report = { pets: state.pets.map((p) => `${p.name}/${p.kind}/${p.species}`) };
   // zwei Pets nebeneinander, das dritte weit weg
   const a = screen.getPrimaryDisplay().workArea;
-  state.pets.forEach((p, i) => { const e = live.get(p.id); const x = i < 2 ? a.x + 300 + i * 170 : a.x + 1000; e.win.setPosition(x, a.y + 200); p.x = x; p.y = a.y + 200; });
+  state.pets.forEach((p, i) => { const e = live.get(p.id); const x = i < 2 ? a.x + 300 + i * 170 : a.x + 1000; placeWin(p.id, x, a.y + 200); p.x = x; p.y = a.y + 200; });
   await sleep(1500);
   const post = (body, type = 'application/json') => new Promise((res) => {
     const r = http.request({ host: '127.0.0.1', port: PORT, path: '/event', method: 'POST', headers: { 'Content-Type': type } }, (rs) => { let d = ''; rs.on('data', (c) => { d += c; }); rs.on('end', () => res(`${rs.statusCode} ${d}`)); });
@@ -609,33 +671,37 @@ async function runSmoke() {
   for (const e of live.values()) e.busyUntil = 0;
   // Erinnerung (DAN) und Gespraech erzwingen
   const dan = state.pets.find((p) => p.kind === 'dan');
-  if (dan) { live.get(dan.id).win.setPosition(a.x + 1400, a.y + 200); say(dan.id, dan.reminders.messages[0], { mood: 'alert', open: true }); }
+  if (dan) { placeWin(dan.id, a.x + 1400, a.y + 200); say(dan.id, dan.reminders.messages[0], { mood: 'alert', open: true }); }
   await sleep(300);
   for (const e of live.values()) if (!dan || e !== live.get(dan.id)) e.busyUntil = 0;
   // Nook neben NEXUS stellen
   const nook = state.pets.find((p) => p.kind === 'nook');
-  if (nook) live.get(nook.id).win.setPosition(a.x + 470, a.y + 200);
+  if (nook) placeWin(nook.id, a.x + 470, a.y + 200);
   report.chatPair = maybeChat(true);
   await sleep(1300);
   await shot('2-gespraech-und-erinnerung');
   // zwei Pets aufeinander: eins muss zur Seite gehen
   await sleep(6000);
   const [p1, p2] = state.pets;
-  const [x1, y1] = live.get(p1.id).win.getPosition();
-  live.get(p2.id).win.setPosition(x1 + 15, y1);
+  const [x1, y1] = posOf(p1.id);
+  placeWin(p2.id, x1 + 15, y1);
   makeRoom(p2, 1);
   await sleep(2500);
-  report.platz = { vorher: 15, nachher: live.get(p2.id).win.getPosition()[0] - live.get(p1.id).win.getPosition()[0] };
+  report.platz = { vorher: 15, nachher: posOf(p2.id)[0] - posOf(p1.id)[0] };
   await shot('2b-platz-gemacht');
   // alle vier nebeneinander: Gruppenszene
   await sleep(4000);
   talking = false;
-  state.pets.forEach((p, i) => { const e = live.get(p.id); stopWalk(p.id); e.busyUntil = 0; e.win.setPosition(a.x + 300 + i * 170, a.y + 200); });
+  state.pets.forEach((p, i) => { const e = live.get(p.id); stopWalk(p.id); e.busyUntil = 0; placeWin(p.id, a.x + 300 + i * 170, a.y + 200); });
   await sleep(300);
   report.gruppe = maybeChat(true);
   await sleep(2200);
   report.szene = recentScenes[recentScenes.length - 1];
   await shot('2c-gruppe');
+  // Monitorwechsel nachstellen: alle Fenster neu aufbauen, Groesse und Position muessen stimmen
+  rebuildAll();
+  await sleep(1500);
+  report.neuaufbau = [...live].map(([id, e]) => { const b = e.win.getBounds(); return `${b.width}x${b.height}@${b.x},${b.y}=${e.pos.x},${e.pos.y}`; });
   openSettings();
   await sleep(1800);
   const img = await settingsWin.webContents.capturePage();

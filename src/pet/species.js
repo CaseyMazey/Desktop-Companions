@@ -2,10 +2,11 @@
 // .body (Koerperfarbe), .eyes (Blinzeln), .mouth-* (je nach Stimmung), .cheek, .limb (Arme/Fluegel/Schwanz).
 /* global window */
 (function () {
-  const eyes = (lx, rx, y) => `
+  // gx: Seite des Glanzpunkts (-1 links, +1 rechts) – bestimmt, wohin das Pet zu schauen scheint
+  const eyes = (lx, rx, y, gx = -1) => `
     <g class="eyes">
-      <g class="eye"><ellipse cx="${lx}" cy="${y}" rx="5.5" ry="7.5" fill="#1e293b"/><circle cx="${lx - 1.8}" cy="${y - 2.8}" r="2" fill="#fff"/></g>
-      <g class="eye"><ellipse cx="${rx}" cy="${y}" rx="5.5" ry="7.5" fill="#1e293b"/><circle cx="${rx - 1.8}" cy="${y - 2.8}" r="2" fill="#fff"/></g>
+      <g class="eye"><ellipse cx="${lx}" cy="${y}" rx="5.5" ry="7.5" fill="#1e293b"/><circle cx="${lx + gx * 1.8}" cy="${y - 2.8}" r="2" fill="#fff"/></g>
+      <g class="eye"><ellipse cx="${rx}" cy="${y}" rx="5.5" ry="7.5" fill="#1e293b"/><circle cx="${rx + gx * 1.8}" cy="${y - 2.8}" r="2" fill="#fff"/></g>
     </g>
     <g class="eyes-closed"><path d="M${lx - 6} ${y} q6 5 12 0 M${rx - 6} ${y} q6 5 12 0" stroke="#1e293b" stroke-width="2.6" fill="none" stroke-linecap="round"/></g>
     <g class="eyes-happy"><path d="M${lx - 6} ${y + 2} q6 -8 12 0 M${rx - 6} ${y + 2} q6 -8 12 0" stroke="#1e293b" stroke-width="2.8" fill="none" stroke-linecap="round"/></g>`;
@@ -33,7 +34,7 @@
         <path d="M22 72 h-12 M22 77 l-11 4 M98 72 h12 M98 77 l11 4"/>
       </g>
       <ellipse class="belly" cx="60" cy="96" rx="22" ry="12" fill="#fff" fill-opacity=".45"/>
-      ${eyes(46, 74, 62)}${cheeks(33, 87, 74)}
+      ${eyes(46, 74, 62, 1)}${cheeks(33, 87, 74)}
       <path d="M57 69 h6 l-3 3 z" fill="#f472b6"/>${mouth(60, 76)}`,
     ghost: () => `
       <path class="body" d="M20 104 L20 60 C20 34 38 18 60 18 C82 18 100 34 100 60 L100 104 Q92 96 85 104 Q78 112 72 104 Q66 96 60 104 Q54 112 48 104 Q42 96 35 104 Q28 112 20 104 Z"/>
@@ -61,8 +62,8 @@
   const GOLD = '#f6b91d';
   const beauEyes = (lx, rx, y) => `
     <g class="eyes">
-      <g class="eye"><ellipse cx="${lx}" cy="${y}" rx="6.5" ry="8" fill="${GOLD}" stroke="#a86f08" stroke-width="1.5"/><ellipse cx="${lx + 0.5}" cy="${y + 0.5}" rx="2.6" ry="5.6" fill="#140f1a"/><circle cx="${lx - 2.2}" cy="${y - 3}" r="2" fill="#fff"/></g>
-      <g class="eye"><ellipse cx="${rx}" cy="${y}" rx="6.5" ry="8" fill="${GOLD}" stroke="#a86f08" stroke-width="1.5"/><ellipse cx="${rx + 0.5}" cy="${y + 0.5}" rx="2.6" ry="5.6" fill="#140f1a"/><circle cx="${rx - 2.2}" cy="${y - 3}" r="2" fill="#fff"/></g>
+      <g class="eye"><ellipse cx="${lx}" cy="${y}" rx="6.5" ry="8" fill="${GOLD}" stroke="#a86f08" stroke-width="1.5"/><g class="pupil"><ellipse cx="${lx + 0.5}" cy="${y + 0.5}" rx="2.6" ry="5.6" fill="#140f1a"/><circle cx="${lx - 2.2}" cy="${y - 3}" r="2" fill="#fff"/></g></g>
+      <g class="eye"><ellipse cx="${rx}" cy="${y}" rx="6.5" ry="8" fill="${GOLD}" stroke="#a86f08" stroke-width="1.5"/><g class="pupil"><ellipse cx="${rx + 0.5}" cy="${y + 0.5}" rx="2.6" ry="5.6" fill="#140f1a"/><circle cx="${rx - 2.2}" cy="${y - 3}" r="2" fill="#fff"/></g></g>
     </g>
     <g class="eyes-closed"><path d="M${lx - 6} ${y} q6 5 12 0 M${rx - 6} ${y} q6 5 12 0" stroke="${GOLD}" stroke-width="2.8" fill="none" stroke-linecap="round"/></g>
     <g class="eyes-happy"><path d="M${lx - 6} ${y + 2} q6 -8 12 0 M${rx - 6} ${y + 2} q6 -8 12 0" stroke="${GOLD}" stroke-width="3" fill="none" stroke-linecap="round"/></g>`;

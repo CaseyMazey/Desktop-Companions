@@ -34,6 +34,10 @@ body:has(#bubble.show) #name { opacity: 0 !important; }
 .eye { transform-box: fill-box; transform-origin: center; transition: transform .07s; }
 .look .eyes { transform: translateX(3px); }
 .eyes { transition: transform .3s; }
+.look .sp-cat .eyes { transform: translateX(-3px); }      /* Katze schaut weg vom Schwanz (nach links) */
+.look .sp-beau .eyes { transform: none; }                 /* Beau: gelbe Iris bleibt stehen … */
+.sp-beau .pupil { transition: transform .3s; }
+.look .sp-beau .pupil { transform: translateX(2px); }     /* … nur Pupille und Glanzpunkt wandern */
 
 /* Grundbewegungen */
 .idle #sprite, .talk #sprite { animation: breathe 3.2s ease-in-out infinite; }
