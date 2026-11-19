@@ -10,7 +10,7 @@ const { createPet, createChosenPet, petsForEvent, normalizePet, normalizeState, 
 const { pickScene, pettedLine } = require('./dialogues');
 const { startBridge, PORT } = require('./bridge');
 const { settingsFile, hookJson, hasHook, installHook } = require('./claudehook');
-const { TALENTS, talentDue, companionDue, companionInfo, SCARED, shortEvent, BREATH, FOCUS, FOCUS_LINES, TIMER_LINES } = require('./talents');
+const { lockLine, lottiPraise, weatherLook, TALENTS, LINES, moonOf, talentDue, companionDue, companionInfo, SCARED, shortEvent, BREATH, FOCUS, FOCUS_LINES, TIMER_LINES } = require('./talents');
 const { loadNookCards } = require('./nookcards');
 const { startWatch } = require('./watch-win');
 const { Updater } = require('./updater');
@@ -189,7 +189,7 @@ ipcMain.on('pet:drag-end', (ev) => {
   send(id, 'pet:dragging', false);
   const pet = petById(id);
   if (!pet) return;
-  if (d.moved <= 4) { openApp(pet); return; }
+  if (d.moved <= 4) { if (!companionClick(pet)) openApp(pet); return; }
   const [x, y] = posOf(id);
   const c = clampToScreen(pet, x, y);
   placeWin(id, c.x, c.y);
@@ -216,7 +216,14 @@ ipcMain.on('pet:petting', (ev, on) => {
 ipcMain.on('pet:petted', (ev) => {
   const [id, e] = entryOf(ev.sender);
   const pet = id && petById(id);
-  if (pet) { e.tmem = e.tmem || {}; e.tmem.pets = (e.tmem.pets || 0) + 1; } // Buh wird mutiger, je oefter er gestreichelt wird
+  if (pet) { e.tmem = e.tmem || {}; e.tmem.pets = (e.tmem.pets || 0) + 1; e.tmem.lastPetAt = Date.now(); } // Buh wird mutiger, Mauz gnaediger
+  // Bip lernt Gefuehle durch Streicheln
+  if (pet && pet.species === 'robot' && isCompanion(pet) && [3, 10, 25].includes(e.tmem.pets)) {
+    const feel = { 3: 'GEMOCHT', 10: 'GEBORGEN', 25: 'GLÜCKLICH' }[e.tmem.pets];
+    say(id, `BIP! NEUES GEFÜHL FREIGESCHALTET: „${feel}“. SPEICHERE … GESPEICHERT. 💙🤖`, { mood: 'happy', ms: 6000 });
+    send(id, 'pet:screen', { heart: true, ms: 6000 });
+    return;
+  }
   if (!pet || pet.muted || e.inTalk || Date.now() - e.pettedAt < 30000) return;
   e.pettedAt = Date.now();
   say(id, pettedLine(pet.species), { mood: 'talk', ms: 3200 });
@@ -447,9 +454,9 @@ async function fetchWeather(place) {
     const g = await (await fetch(`https://geocoding-api.open-meteo.com/v1/search?count=1&language=de&name=${encodeURIComponent(place)}`)).json();
     const loc = g.results && g.results[0];
     if (!loc) { weather[key] = { day: new Date().toDateString(), missing: true }; return; }
-    const f = await (await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${loc.latitude}&longitude=${loc.longitude}&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,weather_code&timezone=auto&forecast_days=1`)).json();
+    const f = await (await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${loc.latitude}&longitude=${loc.longitude}&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,weather_code,wind_speed_10m_max&timezone=auto&forecast_days=1`)).json();
     const d = f.daily;
-    weather[key] = { day: new Date().toDateString(), max: d.temperature_2m_max[0], min: d.temperature_2m_min[0], rain: d.precipitation_probability_max[0] ?? 0, code: d.weather_code[0] };
+    weather[key] = { day: new Date().toDateString(), max: d.temperature_2m_max[0], min: d.temperature_2m_min[0], rain: d.precipitation_probability_max[0] ?? 0, code: d.weather_code[0], wind: (d.wind_speed_10m_max || [0])[0] ?? 0 };
   } catch (e) { log('[wetter]', e.message); } finally { weatherBusy.delete(key); }
 }
 
@@ -458,6 +465,7 @@ function applyTalentAction(pet, action) {
   else if (action === 'cover') send(pet.id, 'pet:mood', { mood: 'cover', ms: 20000 });  // Panda haelt sich die Augen zu
   else if (action === 'stretch') send(pet.id, 'pet:mood', { mood: 'stretch', ms: 4000 }); // Katze streckt sich
   else if (action && action.garden) send(pet.id, 'pet:garden', action.garden);           // Pilz: Garten waechst
+  else if (action && action.prop) send(pet.id, 'pet:prop', { emoji: action.prop, ms: action.ms || 6000 }); // Requisit neben dem Pet
   else if (action === 'nap') setTimeout(() => send(pet.id, 'pet:mood', { mood: 'sleep', ms: 25000 }), 3000); // Katze/Panda: Nickerchen
 }
 
@@ -472,8 +480,228 @@ function nookCards() {
   return cardsCache.cards;
 }
 
+// ----- Charakter-Aktionen im Begleiter-Modus -----
+const isCompanion = (p) => p.kind === 'none' && p.talent && p.talent.enabled && !p.hidden && !p.muted;
+const free = (p) => { const e = live.get(p.id); return e && !p.hidden && !e.inTalk && !e.dragging && !e.petting && !e.breath; };
+// naechstes freies Pet neben pet (gleiche Hoehe, hoechstens maxDx Pixel weg)
+function neighborOf(pet, maxDx = W * 1.2) {
+  const [px, py] = posOf(pet.id);
+  let best = null; let bd = Infinity;
+  for (const p of state.pets) {
+    if (p.id === pet.id || !free(p)) continue;
+    const [x, y] = posOf(p.id);
+    const d = Math.abs(x - px);
+    if (d < maxDx && Math.abs(y - py) < 160 && d < bd) { bd = d; best = p; }
+  }
+  return best;
+}
+// fuer den Rauchtest: wen hat Beau gerade verschwinden lassen? (naechstes Pet, auch wenn es "in einer Szene" ist)
+function neighborOfAny(pet) {
+  const [px, py] = posOf(pet.id);
+  let best = null; let bd = Infinity;
+  for (const p of state.pets) {
+    if (p.id === pet.id || !live.has(p.id)) continue;
+    const [x, y] = posOf(p.id);
+    const d = Math.abs(x - px);
+    if (Math.abs(y - py) < 160 && d < bd) { bd = d; best = p.id; }
+  }
+  return best;
+}
+const memOf = (p) => { const e = live.get(p.id); if (!e) return {}; e.tmem = e.tmem || {}; return e.tmem; };
+const speciesName = (sp) => (SPECIES[sp] ? SPECIES[sp].label.replace(/\s*\(.*\)$/, '') : sp);
+// Systemwerte fuer Bip (nur lokal gelesen): RAM-Belegung und CPU-Last seit der letzten Messung
+let cpuLast = null;
+function systemStats() {
+  const cpus = os.cpus();
+  const t = cpus.reduce((a, c) => { const s = Object.values(c.times).reduce((x, y) => x + y, 0); return { idle: a.idle + c.times.idle, total: a.total + s }; }, { idle: 0, total: 0 });
+  let cpu = 0;
+  if (cpuLast && t.total > cpuLast.total) cpu = Math.round(100 * (1 - (t.idle - cpuLast.idle) / (t.total - cpuLast.total)));
+  cpuLast = t;
+  return { ram: Math.round(100 * (1 - os.freemem() / os.totalmem())), cpu: Math.max(0, Math.min(100, cpu)) };
+}
+function screenShow(pet, label, value, ms = 8000) { send(pet.id, 'pet:screen', { label, value, ms }); }
+// Lotti feuert mit, wenn andere etwas schaffen
+function cheer(text, exceptId) {
+  for (const p of state.pets) if (p.species === 'axolotl' && p.id !== exceptId && isCompanion(p) && free(p)) setTimeout(() => say(p.id, text, { mood: 'happy', ms: 4500 }), 2200);
+}
+
+function companionAction(pet, r) {
+  const mem = memOf(pet);
+  const [x] = posOf(pet.id);
+  switch (r.action) {
+    case 'territory': { // Mauz: "Mein Platz." – der Nachbar rutscht ein Stueck weg
+      const n = neighborOf(pet, 150);
+      if (!n) { say(pet.id, 'Alles meins hier. Gut so. 😼', { mood: 'talk', ms: 4000 }); return; }
+      say(pet.id, 'Mein Platz. 😾', { mood: 'alert', ms: 3000 });
+      setTimeout(() => {
+        say(n.id, n.species === 'dragon' ? 'Ich gehe … aber nur, weil ICH will! 🐉' : 'Okay, okay … ich geh ja schon. 😅', { mood: 'sad', ms: 3500 });
+        const [nx, ny] = posOf(n.id);
+        walkTo(n, freeX(n, nx + Math.sign(nx - x || 1) * 150, ny, Math.sign(nx - x || 1)), 2, { setHome: true });
+      }, 1200);
+      return;
+    }
+    case 'gift': // Mauz bringt dir etwas
+      say(pet.id, 'Ich hab dir was mitgebracht. Gern geschehen. 😼', { mood: 'talk', ms: 5000 });
+      send(pet.id, 'pet:prop', { emoji: '🐭', ms: 120000 });
+      return;
+    case 'yawn': { // Bambus gaehnt – und steckt die Nachbarn an
+      say(pet.id, '*gääähn* 🥱', { mood: 'sleep', ms: 3000 });
+      const [px, py] = posOf(pet.id);
+      for (const p of state.pets) {
+        if (p.id === pet.id || !free(p)) continue;
+        const [nx, ny] = posOf(p.id);
+        if (Math.abs(nx - px) < W * 1.6 && Math.abs(ny - py) < 160) setTimeout(() => say(p.id, '*gähn* … das steckt an. 🥱', { mood: 'sleep', ms: 2600 }), 1300 + Math.random() * 800);
+      }
+      return;
+    }
+    case 'gossip': { // Piep: Klatsch ueber die anderen Pets
+      const news = [];
+      for (const p of state.pets) {
+        if (p.id === pet.id) continue;
+        const m = memOf(p);
+        if (m.scares) news.push(`${p.name} hat heute schon ${m.scares}× versucht, jemanden zu erschrecken!`);
+        if (m.naps) news.push(`${p.name} hat heute ${m.naps} Nickerchen gemacht. Skandal!`);
+        if (m.focusMin) news.push(`${p.name} meldet ${m.focusMin} Minuten Fokus! Rekordverdächtig!`);
+        if (m.flies) news.push(`${p.name} hat ${m.flies} Fliegen gefangen! Die Fliegen sind empört!`);
+        if (m.glasses) news.push(`${p.name} meldet: ${m.glasses} ${m.glasses === 1 ? 'Glas' : 'Gläser'} Wasser getrunken!`);
+        if (m.tricks) news.push(`${p.name} hat heute ${m.tricks}× gezaubert! Augenzeugen sind verwirrt!`);
+      }
+      const others = state.pets.filter((p) => p.id !== pet.id && !p.hidden);
+      if (!news.length && others.length) news.push(`${others[Math.floor(Math.random() * others.length)].name} wurde heute beim Blinzeln gesichtet! Mehr in Kürze!`);
+      if (!news.length) news.push('Exklusiv: Hier passiert gerade … nichts. Ich bleibe dran!');
+      say(pet.id, `📰 Klatsch & Tratsch: ${news[Math.floor(Math.random() * news.length)]}`, { mood: 'alert', ms: 8000 });
+      send(pet.id, 'pet:prop', { emoji: '📰', ms: 8000 });
+      return;
+    }
+    case 'paper': { // Piep: Tageszeitung am Morgen
+      const now = new Date();
+      const date = now.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' });
+      const w = Object.entries(weather).find(([, v]) => v && !v.missing);
+      const wx = w ? ` Wetter in ${w[0][0].toUpperCase()}${w[0].slice(1)}: ${Math.round(w[1].min)}–${Math.round(w[1].max)} °C.` : '';
+      say(pet.id, `📰 Guten Morgen! Die Zeitung von heute: ${date}. Mond: ${moonOf(now)}.${wx} Schlagzeile: „Toller Mensch startet in den Tag“!`, { mood: 'happy', ms: 12000 });
+      send(pet.id, 'pet:prop', { emoji: '📰', ms: 12000 });
+      return;
+    }
+    case 'trick': { // Beau laesst ein Nachbar-Pet kurz verschwinden
+      mem.tricks = (mem.tricks || 0) + 1;
+      const n = neighborOf(pet);
+      const e = live.get(pet.id);
+      say(pet.id, 'Abrakadabra … ✨🎩', { mood: 'greet', ms: 2200 });
+      if (!n) { setTimeout(() => say(pet.id, '… es sollte jemand verschwinden. Aber es ist niemand da. Dann eben ein Funkeln. ✨', { mood: 'happy', ms: 5000 }), 2000); return; }
+      const ne = live.get(n.id);
+      e.inTalk = true; ne.inTalk = true;
+      setTimeout(() => { if (!ne.win.isDestroyed()) ne.win.hide(); say(pet.id, 'Simsalabim! ✨', { mood: 'greet', ms: 2500 }); }, 1600);
+      setTimeout(() => { if (!ne.win.isDestroyed() && !allHidden() && !n.hidden) ne.win.showInactive(); say(n.id, 'W-was ist passiert?! Wo war ich?! 😵', { mood: 'alert', ms: 3500 }); }, 4600);
+      setTimeout(() => { say(pet.id, 'Tadaa! 🎩✨ Danke, danke.', { mood: 'happy', ms: 3500 }); e.inTalk = false; ne.inTalk = false; }, 6800);
+      return;
+    }
+    case 'sneak': { // Fips schleicht davon, wenn die Maus weit weg ist
+      const c = screen.getCursorScreenPoint();
+      const [px, py] = posOf(pet.id);
+      if (Math.abs(c.x - px - W / 2) < 500 && Math.abs(c.y - py) < 400) { say(pet.id, 'Psst. Ich hab nichts vor. Gar nichts. 🦊', { mood: 'talk', ms: 4000 }); return; }
+      send(pet.id, 'pet:fx', { name: 'sneak', ms: 6000 });
+      walkTo(pet, px + (Math.random() < 0.5 ? -70 : 70), 0.7);
+      return;
+    }
+    case 'slide': { // Watschel rutscht auf dem Bauch
+      const [px, py] = posOf(pet.id);
+      const dir = Math.random() < 0.5 ? -1 : 1;
+      send(pet.id, 'pet:slide', true);
+      walkTo(pet, freeX(pet, px + dir * 120, py, dir), 2.6);
+      setTimeout(() => send(pet.id, 'pet:slide', false), 1900);
+      return;
+    }
+    case 'sprint': { // Hoppel sprintet hin und zurueck
+      const [px] = posOf(pet.id);
+      const dir = Math.random() < 0.5 ? -1 : 1;
+      walkTo(pet, px + dir * 90, 4.2);
+      setTimeout(() => walkTo(pet, px, 4.2), 1400);
+      return;
+    }
+    case 'roll': send(pet.id, 'pet:fx', { name: 'roll', ms: 1100 }); return;
+    case 'pompom': send(pet.id, 'pet:prop', { emoji: '🎉', ms: 4500 }); return;
+    case 'sysreport': { // Bip: Systembericht mit echten Werten, gross auf dem Bildschirm
+      const s = systemStats();
+      if (Math.random() < 0.6) {
+        say(pet.id, `BIP. SYSTEMBERICHT: RAM ${s.ram} % BELEGT. CPU ${s.cpu} %. ${s.ram >= 80 ? 'LÜFTER: VERMUTLICH LAUT. EMPFEHLUNG: TABS SCHLIESSEN.' : 'ALLES IM GRÜNEN BEREICH.'} 🤖`, { mood: 'talk', ms: 8000 });
+        screenShow(pet, 'RAM', `${s.ram}%`);
+      } else {
+        const m = Math.round((Date.now() - activity.activeSince) / 60000);
+        say(pet.id, `BIP. SITZUNG LÄUFT SEIT ${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')} STUNDEN. ${m >= 90 ? 'EMPFEHLUNG: PAUSE. AUCH ROBOTER LADEN AUF.' : 'LEISTUNG: OPTIMAL.'} 🤖`, { mood: 'talk', ms: 8000 });
+        screenShow(pet, 'ZEIT', `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`);
+      }
+      return;
+    }
+    default: break;
+  }
+}
+
+// ----- Hoppel: zaehlt, wie lange der PC gesperrt war oder im Ruhezustand (solange er an ist) -----
+let lockedAt = null;
+let lockHow = 'lock';
+function onLocked(how) { if (!lockedAt) { lockedAt = Date.now(); lockHow = how; } }
+function onUnlocked() {
+  if (!lockedAt) return;
+  const min = Math.round((Date.now() - lockedAt) / 60000);
+  const how = lockHow;
+  lockedAt = null;
+  if (min < 1) return;
+  const d = new Date();
+  const day = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+  for (const p of state.pets) {
+    if (p.species !== 'bunny' || !p.talent.enabled || p.hidden || p.muted || !live.has(p.id)) continue;
+    const m = memOf(p);
+    if (m.lockDay !== day) { m.lockDay = day; m.lockTotal = 0; }
+    m.lockTotal += min;
+    setTimeout(() => { say(p.id, lockLine(min, m.lockTotal, how), { mood: 'alert', ms: 10000 }); send(p.id, 'pet:prop', { emoji: '⏱️', ms: 10000 }); }, 2500);
+  }
+}
+// Info am Namensschild sofort aktualisieren (z. B. nach Lottis Klick)
+function e2update(pet) {
+  const e = live.get(pet.id);
+  if (!e) return;
+  const ctx = { now: new Date(), activeMin: (Date.now() - activity.activeSince) / 60000, battery, weather, cards: [], sys: null };
+  e.lastInfo = companionInfo(pet, memOf(pet), ctx);
+  send(pet.id, 'pet:info', e.lastInfo);
+}
+
+// Klick auf ein Begleiter-Pet: Blubb zaehlt ein Glas, Beau zieht eine Karte, Bip zeigt den Systembericht
+function companionClick(pet) {
+  if (!isCompanion(pet)) return false;
+  const mem = memOf(pet);
+  if (pet.species === 'blob') {
+    mem.glasses = (mem.glasses || 0) + 1;
+    say(pet.id, `GLUCK GLUCK! Glas Nummer ${mem.glasses} heute! Du bist GROSSARTIG! 💧💚`, { mood: 'happy', ms: 5000 });
+    send(pet.id, 'pet:fx', { name: 'split', ms: 1600 });
+    send(pet.id, 'pet:prop', { emoji: '🥛', ms: 5000 });
+    cheer('Getrunken! Ich bin so stolz auf dich! 🩷💧', pet.id);
+    return true;
+  }
+  if (pet.species === 'beau') {
+    const day = new Date().toDateString();
+    if (mem.cardDay === day) { say(pet.id, 'Mrrp. Die nächste Karte gibt’s morgen. Der Hut braucht Ruhe. 🎩', { mood: 'talk', ms: 4000 }); return true; }
+    mem.cardDay = day;
+    say(pet.id, LINES.beau[Math.floor(Math.random() * LINES.beau.length)], { mood: 'greet', ms: 9000 });
+    return true;
+  }
+  if (pet.species === 'robot') { companionAction(pet, { action: 'sysreport' }); return true; }
+  if (pet.species === 'axolotl') {
+    const d = new Date();
+    const day = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+    if (mem.winsDay !== day) { mem.winsDay = day; mem.wins = 0; }
+    mem.wins = (mem.wins || 0) + 1;
+    say(pet.id, lottiPraise(mem.wins), { mood: 'happy', ms: 5000 });
+    send(pet.id, 'pet:prop', { emoji: mem.wins >= 10 ? '🎊' : '🎉', ms: 4500 });
+    if (mem.wins >= 5) send(pet.id, 'pet:fx', { name: 'roll', ms: 1100 }); // ab 5 vor Freude ein Purzelbaum
+    e2update(pet);
+    return true;
+  }
+  return false;
+}
+
 // Buh will jemanden erschrecken: das naechste Pet daneben (sonst dich)
 function ghostScare(ghost) {
+  memOf(ghost).scares = (memOf(ghost).scares || 0) + 1;
   const [gx, gy] = posOf(ghost.id);
   let target = null;
   let best = Infinity;
@@ -493,6 +721,9 @@ function ghostScare(ghost) {
   say(ghost.id, 'Buh! 👻', { mood: 'alert', ms: 1800 });
   setTimeout(() => say(target.id, SCARED[target.species] || 'Aaah! 😱', { mood: target.species === 'panda' ? 'sleep' : 'alert', ms: 3500 }), 1000);
   setTimeout(() => say(ghost.id, 'Hihi … Entschuldigung! 👻', { mood: 'happy', ms: 3000 }), 4200);
+  // Watschel troestet den Erschreckten
+  const calm = state.pets.find((p) => p.species === 'penguin' && p.id !== target.id && isCompanion(p) && free(p));
+  if (calm) setTimeout(() => say(calm.id, `Alles gut, ${target.name}. Einatmen … ausatmen. 🐧`, { mood: 'talk', ms: 4000 }), 5200);
   setTimeout(() => {
     for (const id of [ghost.id, target.id]) { const e = live.get(id); if (e) e.inTalk = false; send(id, 'pet:face', 0); }
   }, 7400);
@@ -502,15 +733,21 @@ function talentTick() {
   sampleActivity();
   const today = new Date().toDateString();
   for (const p of state.pets) {
-    const place = talentOn(p, 'frog') && p.talent.place;
+    const place = (talentOn(p, 'frog') || talentOn(p, 'mushroom')) && p.talent.place;
     if (place && (!weather[place.toLowerCase()] || weather[place.toLowerCase()].day !== today)) fetchWeather(place);
   }
-  const ctx = { now: new Date(), activeMin: (Date.now() - activity.activeSince) / 60000, away: activity.away, backFromBreak: activity.backFromBreak, missed: missed.slice(), done: doneCount, battery, weather, cards: nookCards() };
+  const ctx = { now: new Date(), activeMin: (Date.now() - activity.activeSince) / 60000, away: activity.away, backFromBreak: activity.backFromBreak, missed: missed.slice(), done: doneCount, battery, weather, cards: nookCards(), sys: state.pets.some((p) => p.species === 'robot' && isCompanion(p)) ? systemStats() : null };
   for (const pet of state.pets) {
     const e = live.get(pet.id);
     if (!e) continue;
     e.tmem = e.tmem || {};
     // Info am Namensschild (Begleiter-Modus, Huhu mit Nook) aktuell halten
+    // Pilzi: Aussehen passend zum Wetter seines Orts (Sonnenbrille, Pilzfreund, klein im Wind, Schnee, Schal)
+    if (pet.species === 'mushroom') {
+      const look = pet.talent.enabled && pet.talent.place ? weatherLook(weather[pet.talent.place.toLowerCase()]) : null;
+      const key = JSON.stringify(look);
+      if (key !== e.lastLook) { e.lastLook = key; send(pet.id, 'pet:weather', look); }
+    }
     const info = companionInfo(pet, e.tmem, ctx);
     if (info !== e.lastInfo) { e.lastInfo = info; send(pet.id, 'pet:info', info); }
     if (pet.hidden || allHidden() || e.inTalk || e.dragging || e.petting || e.breath) continue;
@@ -520,7 +757,8 @@ function talentTick() {
     if (r.action === 'scare') { ghostScare(pet); continue; }
     if (r.text) say(pet.id, r.text, { mood: r.mood, ms: r.ms, open: !!(r.open && pet.target) });
     else if (r.mood) send(pet.id, 'pet:mood', { mood: r.mood, ms: 1600 });
-    if (r.action) applyTalentAction(pet, r.action);
+    if (typeof r.action === 'string' && COMPANION_ACTIONS.has(r.action)) companionAction(pet, r);
+    else if (r.action) applyTalentAction(pet, r.action);
     // Huhus Quiz: die Antwort kommt 10 Sekunden spaeter
     if (r.quiz) setTimeout(() => { if (live.has(pet.id)) say(pet.id, `Antwort: ${r.quiz.a} 🦉`, { mood: 'happy', ms: Math.min(14000, 5000 + r.quiz.a.length * 45) }); }, 10500);
   }
@@ -532,6 +770,8 @@ function talentTick() {
 function noteEventForTalents(ev) {
   const src = { nexus: '3C', 'claude-code': 'Claude Code' }[ev.app] || (APPS[ev.app] && APPS[ev.app].label) || ev.app || 'App';
   if (ev.type === 'task-done') doneCount++;
+  // Blubb troestet bei Fehlermeldungen
+  if (ev.type === 'task-error') for (const p of state.pets) if (p.species === 'blob' && isCompanion(p) && free(p)) setTimeout(() => say(p.id, 'Hey! Fehler sind nur Umwege! Du schaffst das trotzdem! 💚', { mood: 'happy', ms: 5000 }), 3500);
   for (const e of live.values()) { e.tmem = e.tmem || {}; e.tmem.events = (e.tmem.events || 0) + 1; } // Piep zaehlt mit
   if (activity.away || powerMonitor.getSystemIdleTime() >= 300) { missed.push({ short: shortEvent(ev, src) }); if (missed.length > 20) missed.shift(); }
 }
@@ -547,7 +787,7 @@ function startFocus(pet, phase = 'work') {
   const endsAt = Date.now() + mins * 60000;
   e.timer = { kind: 'focus', phase, endsAt, label: phase === 'work' ? 'Fokus' : 'Pause' };
   e.timer.handle = setTimeout(() => {
-    if (phase === 'work') { e.tmem = e.tmem || {}; e.tmem.focusMin = (e.tmem.focusMin || 0) + FOCUS.work; say(pet.id, FOCUS_LINES.rest, { mood: 'happy', ms: 12000 }); startFocus(pet, 'rest'); }
+    if (phase === 'work') { e.tmem = e.tmem || {}; e.tmem.focusMin = (e.tmem.focusMin || 0) + FOCUS.work; say(pet.id, FOCUS_LINES.rest, { mood: 'happy', ms: 12000 }); cheer(`${pet.name} hat 25 Minuten Fokus geschafft – und DU auch! 🎉`); startFocus(pet, 'rest'); }
     else { clearTimer(e); showTimer(pet.id, null); say(pet.id, FOCUS_LINES.again, { mood: 'alert', ms: 12000 }); }
   }, mins * 60000);
   showTimer(pet.id, e.timer);
@@ -621,6 +861,9 @@ function updateWatch() {
   if (need && !stopWatch && !SMOKE) stopWatch = startWatch(onWatch, log);
   if (!need && stopWatch) { stopWatch(); stopWatch = null; if (autoHidden) { autoHidden = false; applyVisibility(); } }
 }
+const COMPANION_ACTIONS = new Set(['territory', 'gift', 'yawn', 'gossip', 'paper', 'trick', 'sneak', 'slide', 'sprint', 'roll', 'pompom', 'sysreport']);
+// Quak hat mit der Zunge eine "Fliege" (den Mauszeiger) erwischt
+ipcMain.on('pet:fly', (ev) => { const [id] = entryOf(ev.sender); const p = id && petById(id); if (p) { const m = memOf(p); m.flies = (m.flies || 0) + 1; } });
 ipcMain.on('pet:battery', (_ev, b) => { if (b && typeof b.level === 'number') battery = { level: Math.max(0, Math.min(1, b.level)), charging: !!b.charging }; });
 
 // ---------- Pets verwalten ----------
@@ -914,6 +1157,10 @@ app.whenReady().then(() => {
   updater.start();
   setInterval(checkReminders, 30000);
   setInterval(talentTick, 30000);
+  powerMonitor.on('lock-screen', () => onLocked('lock'));
+  powerMonitor.on('suspend', () => onLocked('sleep'));
+  powerMonitor.on('unlock-screen', onUnlocked);
+  powerMonitor.on('resume', onUnlocked);
   updateWatch();
   setInterval(() => maybeChat(), 12000);
   setInterval(maybeWander, 9000);
@@ -1000,6 +1247,45 @@ async function runSmoke() {
   if (buh) { const [bx, by] = posOf(buh.id); placeWin(dragon.id, bx + 170, by); ghostScare(buh); await sleep(1400); report.begleiter.schreck = [await bubble(buh), await bubble(dragon)]; }
   await sleep(10500);
   report.begleiter.antwort = await bubble(owl);
+  // staerkere Charaktere: Bip, Watschel, Beau, Blubb, Mauz, Piep als Begleiter nebeneinander
+  const chars = ['robot', 'penguin', 'beau', 'blob', 'cat', 'bird'].map((sp, i) => {
+    const p = addChosenPet({ kind: 'none', species: sp });
+    placeWin(p.id, a.x + 200 + i * 175, a.y + 820);
+    return p;
+  });
+  await sleep(1600);
+  for (const e of live.values()) { e.busyUntil = 0; e.inTalk = false; }
+  const [bip, wat, beauC, blubb, mauz, piep] = chars;
+  const cls = async (p) => live.get(p.id).win.webContents.executeJavaScript(`document.getElementById('pet').className`);
+  companionAction(bip, { action: 'sysreport' });
+  const watX = posOf(wat.id)[0];
+  companionAction(wat, { action: 'slide' });
+  await sleep(500);
+  report.charaktere = { bip: await bubble(bip), bipKlasse: await cls(bip), watschelKlasse: await cls(wat) };
+  await sleep(2200);
+  report.charaktere.watschelGerutscht = posOf(wat.id)[0] - watX;
+  companionClick(blubb);
+  companionAction(mauz, { action: 'territory' });
+  companionAction(piep, { action: 'gossip' });
+  companionAction(beauC, { action: 'trick' });
+  await sleep(2200);
+  report.charaktere.blubb = await bubble(blubb);
+  report.charaktere.mauz = await bubble(mauz);
+  report.charaktere.piep = await bubble(piep);
+  report.charaktere.beauNachbarVersteckt = !live.get(neighborOfAny(beauC)).win.isVisible();
+  await sleep(5000);
+  report.charaktere.beau = await bubble(beauC);
+  // Hoppel zaehlt die Sperrzeit, Lotti zaehlt Aufgaben per Klick
+  const hoppel = addChosenPet({ kind: 'none', species: 'bunny' });
+  const lotti = addChosenPet({ kind: 'none', species: 'axolotl' });
+  placeWin(hoppel.id, a.x + 300, a.y + 1000); placeWin(lotti.id, a.x + 500, a.y + 1000);
+  await sleep(1500);
+  lockedAt = Date.now() - 47 * 60000; lockHow = 'lock';
+  onUnlocked();
+  companionClick(lotti); companionClick(lotti); companionClick(lotti);
+  await sleep(3200);
+  report.charaktere.hoppel = await bubble(hoppel);
+  report.charaktere.lotti = await bubble(lotti);
   openSettings();
   await sleep(1800);
   const img = await settingsWin.webContents.capturePage();

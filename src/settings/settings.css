@@ -48,6 +48,7 @@ header { display: flex; align-items: center; gap: 16px; margin-bottom: 14px; }
 .fur { fill: #2a2433; stroke: #5b4f6e; stroke-width: 2.5; stroke-linejoin: round; }
 .wave { display: none; }
 .dark { fill: var(--c-dark); }
+.screen-heart, .screen-text, .screen-mini, .slide-pose, .tongue, .minis, .snowcap, .scarf, .shades, .friend, .drops { display: none; }
 .disc { fill: #fff8ec; stroke: var(--c-dark); stroke-width: 2.5; }
 .cheek { fill: #fb7185; opacity: .45; }
 .eyes-closed, .eyes-happy, .mouth, .beak-open { display: none; }

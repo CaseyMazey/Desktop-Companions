@@ -25,7 +25,9 @@
       <path class="shine" d="M36 48 q8 -10 20 -10" stroke="#fff" stroke-opacity=".55" stroke-width="5" fill="none" stroke-linecap="round"/>
       <path class="body limb limb-l" d="M18 86 q-12 4 -10 14 q8 2 14 -6 z"/>
       <path class="body limb limb-r" d="M102 86 q12 4 10 14 q-8 2 -14 -6 z"/>
-      ${eyes(46, 74, 68)}${cheeks(34, 86, 80)}${mouth(60, 82)}`,
+      ${eyes(46, 74, 68)}${cheeks(34, 86, 80)}${mouth(60, 82)}
+      <g class="minis"><path class="body mini-l" d="M2 110 C1 98 6 90 13 90 C20 90 25 98 24 110 Q13 113 2 110 Z"/><path class="body mini-r" d="M96 110 C95 98 100 90 107 90 C114 90 119 98 118 110 Q107 113 96 110 Z"/>
+        <circle cx="10" cy="100" r="1.6" fill="#1e293b"/><circle cx="16" cy="100" r="1.6" fill="#1e293b"/><circle cx="104" cy="100" r="1.6" fill="#1e293b"/><circle cx="110" cy="100" r="1.6" fill="#1e293b"/></g>`,
     cat: () => `
       <path class="body limb tail" d="M96 96 q22 -6 18 -34 q-2 -8 -8 -4 q4 22 -14 30 z"/>
       <path class="body" d="M24 46 L22 18 L44 34 Q60 28 76 34 L98 18 L96 46 Q108 66 102 92 Q96 110 60 110 Q24 110 18 92 Q12 66 24 46 Z"/>
@@ -111,6 +113,13 @@
   const beak = (x, y) => `
       <path class="beak" d="M${x - 6} ${y} L${x + 6} ${y} L${x} ${y + 8} Z" fill="#f59e0b" stroke="#b45309" stroke-width="1.5" stroke-linejoin="round"/>
       <g class="beak-open"><path d="M${x - 6} ${y} L${x + 6} ${y} L${x} ${y + 5} Z" fill="#f59e0b" stroke="#b45309" stroke-width="1.5" stroke-linejoin="round"/><path d="M${x - 4} ${y + 7} L${x + 4} ${y + 7} L${x} ${y + 11} Z" fill="#f59e0b" stroke="#b45309" stroke-width="1.5" stroke-linejoin="round"/></g>`;
+  // Breites Laecheln als einziger Mund (Frosch, Axolotl): klar erkennbar, die anderen Stimmungen wie bei mouth()
+  const wideMouth = (x, y, w) => `
+    <path class="mouth mouth-idle" d="M${x - w} ${y} q${w} ${w * 0.55} ${w * 2} 0" stroke="#1e293b" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+    <ellipse class="mouth mouth-talk" cx="${x}" cy="${y + 2}" rx="${w * 0.45}" ry="4.5" fill="#7f1d1d"/>
+    <path class="mouth mouth-happy" d="M${x - w} ${y - 1} q${w} ${w * 0.9} ${w * 2} 0 z" fill="#7f1d1d" stroke="#1e293b" stroke-width="2" stroke-linejoin="round"/>
+    <path class="mouth mouth-sad" d="M${x - w * 0.6} ${y + 4} q${w * 0.6} -6 ${w * 1.2} 0" stroke="#1e293b" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+    <ellipse class="mouth mouth-alert" cx="${x}" cy="${y + 1.5}" rx="3.5" ry="4.2" fill="#1e293b"/>`;
   const roundBody = (top) => `<path class="body" d="M60 ${top} C88 ${top} 104 ${top + 20} 102 ${top + 46} C100 ${top + 68} 84 110 60 110 C36 110 20 ${top + 68} 18 ${top + 46} C16 ${top + 20} 32 ${top} 60 ${top} Z"/>`;
 
   Object.assign(SPECIES, {
@@ -147,15 +156,33 @@
       <ellipse class="belly" cx="60" cy="96" rx="28" ry="12" fill="#fff" fill-opacity=".4"/>
       <path class="body limb limb-l" d="M30 98 q-16 2 -18 11 h20 z"/><path class="body limb limb-r" d="M90 98 q16 2 18 11 h-20 z"/>
       ${eyes(40, 80, 44)}${cheeks(28, 92, 70)}
-      <path class="stripe" d="M38 70 q22 10 44 0" stroke-width="2.4" fill="none" stroke-linecap="round" opacity=".7"/>${mouth(60, 76)}`,
+      ${wideMouth(60, 74, 15)}
+      <line class="tongue" x1="60" y1="76" x2="60" y2="76" stroke="#ec4899" stroke-width="7" stroke-linecap="round"/>`,
 
     // Pinguin: dunkler Koerper (Farbe waehlbar), weisses Gesicht und Bauch, oranger Schnabel und Fuesse
     penguin: () => `
+      <g class="stand">
       <ellipse cx="48" cy="109" rx="9" ry="4.5" fill="#f59e0b" stroke="#b45309" stroke-width="1.5"/><ellipse cx="72" cy="109" rx="9" ry="4.5" fill="#f59e0b" stroke="#b45309" stroke-width="1.5"/>
       <path class="body" d="M60 22 C86 22 100 46 100 74 C100 98 86 108 60 108 C34 108 20 98 20 74 C20 46 34 22 60 22 Z"/>
       <path d="M60 40 C70 34 84 40 84 56 C90 74 88 102 60 104 C32 102 30 74 36 56 C36 40 50 34 60 40 Z" fill="#fff"/>
       <path class="body limb wing-l" d="M22 62 q-14 14 -10 32 q12 -6 12 -24 z"/><path class="body limb wing-r" d="M98 62 q14 14 10 32 q-12 -6 -12 -24 z"/>
-      ${eyes(49, 71, 58)}${cheeks(40, 80, 72)}${beak(60, 66)}`,
+      ${eyes(49, 71, 58)}${cheeks(40, 80, 72)}${beak(60, 66)}
+      </g>
+      <!-- seitlich auf dem Bauch rutschend (Blick nach rechts; gespiegelt fuer links) -->
+      <g class="slide-pose">
+        <path class="puffs" d="M2 106 h9 M6 99 h7 M0 112 h6" stroke="#fff" stroke-opacity=".85" stroke-width="2.6" stroke-linecap="round"/>
+        <ellipse cx="17" cy="103" rx="7" ry="3.5" fill="#f59e0b" stroke="#b45309" stroke-width="1.5" transform="rotate(-18 17 103)"/>
+        <ellipse cx="19" cy="109" rx="7" ry="3.5" fill="#f59e0b" stroke="#b45309" stroke-width="1.5" transform="rotate(12 19 109)"/>
+        <path class="body" d="M22 100 C22 86 46 79 72 80 C94 81 108 88 108 99 C108 108 94 113 66 113 C40 113 22 110 22 100 Z"/>
+        <path d="M30 106 C48 112 84 113 104 104 C100 110 86 113 66 113 C46 113 34 111 30 106 Z" fill="#fff"/>
+        <path d="M84 84 C96 84 106 90 106 98 C106 104 100 106 92 104 C84 102 80 96 80 90 C80 87 81 84 84 84 Z" fill="#fff"/>
+        <path class="body limb wing-l" d="M66 92 Q48 92 30 99 Q48 100 66 98 Z"/>
+        <g class="eyes"><g class="eye"><ellipse cx="94" cy="92" rx="3.6" ry="4.8" fill="#1e293b"/><circle cx="95.4" cy="90.4" r="1.4" fill="#fff"/></g></g>
+        <g class="eyes-closed"><path d="M90 92 q4 3 8 0" stroke="#1e293b" stroke-width="2.4" fill="none" stroke-linecap="round"/></g>
+        <g class="eyes-happy"><path d="M90 93 q4 -5 8 0" stroke="#1e293b" stroke-width="2.4" fill="none" stroke-linecap="round"/></g>
+        <ellipse class="cheek" cx="92" cy="100" rx="4" ry="2.4"/>
+        <path d="M106 94 L116 97 L106 100 Z" fill="#f59e0b" stroke="#b45309" stroke-width="1.5" stroke-linejoin="round"/>
+      </g>`,
 
     // Hase: lange Ohren (wackeln beim Streicheln), Stupsnase, Puschelschwanz
     bunny: () => `
@@ -189,7 +216,7 @@
       <ellipse class="belly" cx="60" cy="98" rx="22" ry="9" fill="#fff" fill-opacity=".35"/>
       <path class="body limb limb-l" d="M26 92 q-10 4 -8 14 q8 0 10 -8 z"/><path class="body limb limb-r" d="M94 92 q10 4 8 14 q-8 0 -10 -8 z"/>
       ${eyes(40, 80, 68)}${cheeks(28, 92, 80)}
-      <path class="stripe smile" d="M44 80 q16 10 32 0" stroke-width="2.4" fill="none" stroke-linecap="round"/>${mouth(60, 84)}`,
+      ${wideMouth(60, 82, 11)}`,
 
     // kleiner Drache: Hoerner, Rueckenzacken, Fledermausfluegel, Bauchschuppen, Schwanz mit Spitze
     dragon: () => `
@@ -213,7 +240,13 @@
       <g class="cap"><path class="body" d="M8 70 C8 36 32 16 60 16 C88 16 112 36 112 70 Q60 82 8 70 Z"/>
         <circle cx="38" cy="38" r="7" fill="#fff" opacity=".9"/><circle cx="66" cy="28" r="5" fill="#fff" opacity=".9"/><circle cx="88" cy="46" r="8" fill="#fff" opacity=".9"/><circle cx="22" cy="60" r="4.5" fill="#fff" opacity=".9"/><circle cx="58" cy="56" r="4" fill="#fff" opacity=".9"/>
         <path d="M24 38 q8 -12 22 -16" stroke="#fff" stroke-opacity=".5" stroke-width="4" fill="none" stroke-linecap="round"/></g>
-      ${eyes(48, 72, 86)}${cheeks(39, 81, 96)}${mouth(60, 98)}`,
+      ${eyes(48, 72, 86)}${cheeks(39, 81, 96)}${mouth(60, 98)}
+      <!-- Wetter (nur sichtbar mit passender Klasse): Schneehaube, Schal, Sonnenbrille, Pilzfreund, Regentropfen -->
+      <path class="snowcap" d="M12 56 C16 32 36 17 60 17 C84 17 104 32 108 56 C101 49 95 54 88 47 C81 54 73 47 66 52 C59 46 51 52 45 47 C37 54 30 47 23 53 C19 49 15 53 12 56 Z" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/>
+      <g class="scarf"><path d="M34 73 Q60 82 86 73 L87 81 Q60 90 33 81 Z" fill="#60a5fa" stroke="#2563eb" stroke-width="1.5" stroke-linejoin="round"/><path d="M75 80 L79 97 L86 95 L83 79 Z" fill="#60a5fa" stroke="#2563eb" stroke-width="1.5" stroke-linejoin="round"/><path d="M40 77 l2 6 M50 79 l2 6 M60 80 l1 6 M70 79 l-1 6" stroke="#93c5fd" stroke-width="1.5"/></g>
+      <g class="shades"><rect x="39" y="80" width="18" height="11" rx="4.5" fill="#1e293b"/><rect x="63" y="80" width="18" height="11" rx="4.5" fill="#1e293b"/><path d="M57 84.5 h6" stroke="#1e293b" stroke-width="2.5"/><path d="M42 83 h5 M66 83 h5" stroke="#fff" stroke-opacity=".55" stroke-width="1.6" stroke-linecap="round"/></g>
+      <g class="friend"><path d="M-14 104 Q-14 88 -1 88 Q12 88 12 104 Z" fill="#e5534b" stroke="#a83232" stroke-width="1.8"/><circle cx="-7" cy="95" r="2" fill="#fff"/><circle cx="4" cy="93" r="2.4" fill="#fff"/><rect x="-6" y="103" width="10" height="9" rx="3" fill="#fdf3e1" stroke="#d8c3a0" stroke-width="1.5"/><circle cx="-3" cy="107" r="1.1" fill="#1e293b"/><circle cx="1.5" cy="107" r="1.1" fill="#1e293b"/></g>
+      <g class="drops"><path d="M26 4 v7 M52 -4 v7 M80 2 v7 M96 -6 v7 M40 -12 v7 M68 -10 v7" stroke="#60a5fa" stroke-width="2.2" stroke-linecap="round"/></g>`,
 
     // Roboter: runder Kasten mit Antenne (Lampe blinkt), Gesichtsdisplay, Bauchklappe mit Lichtern
     robot: () => `
@@ -221,10 +254,29 @@
       <rect class="dark" x="36" y="102" width="16" height="9" rx="4"/><rect class="dark" x="68" y="102" width="16" height="9" rx="4"/>
       <rect class="body" x="20" y="28" width="80" height="78" rx="24"/>
       <path class="body limb limb-l" d="M21 66 q-13 3 -13 16 q9 2 13 -6 z"/><path class="body limb limb-r" d="M99 66 q13 3 13 16 q-9 2 -13 -6 z"/>
-      <rect x="29" y="40" width="62" height="40" rx="15" fill="#eaf6fb" stroke="#1e293b" stroke-opacity=".25" stroke-width="2"/>
+      <!-- Gesicht = Monitor: zeigt Gesicht, Herz (beim Streicheln) oder Werte wie "RAM 63 %" -->
+      <rect x="28" y="39" width="64" height="42" rx="13" fill="#1d2a3a" stroke="#0f172a" stroke-width="2.5"/>
+      <rect x="31" y="42" width="58" height="36" rx="10" fill="#22364b"/>
+      <path d="M34 50 h52 M34 58 h52 M34 66 h52 M34 74 h52" stroke="#67e8f9" stroke-opacity=".06" stroke-width="1.5"/>
+      <g class="screen-face">
+        <g class="eyes">
+          <g class="eye"><rect x="41" y="51" width="10" height="13" rx="4" fill="#67e8f9"/><rect x="43" y="53" width="3" height="3" rx="1" fill="#fff"/></g>
+          <g class="eye"><rect x="69" y="51" width="10" height="13" rx="4" fill="#67e8f9"/><rect x="71" y="53" width="3" height="3" rx="1" fill="#fff"/></g>
+        </g>
+        <g class="eyes-closed"><path d="M40 59 q6 4 12 0 M68 59 q6 4 12 0" stroke="#67e8f9" stroke-width="2.6" fill="none" stroke-linecap="round"/></g>
+        <g class="eyes-happy"><path d="M40 61 q6 -7 12 0 M68 61 q6 -7 12 0" stroke="#67e8f9" stroke-width="2.8" fill="none" stroke-linecap="round"/></g>
+        <rect class="cheek" x="34" y="66" width="7" height="4" rx="2"/><rect class="cheek" x="79" y="66" width="7" height="4" rx="2"/>
+        <path class="mouth mouth-idle" d="M54 69 q6 5 12 0" stroke="#67e8f9" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+        <rect class="mouth mouth-talk" x="55" y="68" width="10" height="6" rx="2" fill="#67e8f9"/>
+        <path class="mouth mouth-happy" d="M52 68 q8 9 16 0 z" fill="#67e8f9"/>
+        <path class="mouth mouth-sad" d="M54 72 q6 -5 12 0" stroke="#67e8f9" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+        <rect class="mouth mouth-alert" x="57" y="67" width="6" height="7" rx="2" fill="#67e8f9"/>
+        <text class="screen-mini" x="60" y="75.5" text-anchor="middle"></text>
+      </g>
+      <path class="screen-heart" d="M60 74 C48 66 42 60 44 54 C46 48 54 47 60 54 C66 47 74 48 76 54 C78 60 72 66 60 74 Z" fill="#f472b6"/>
+      <g class="screen-text"><text class="scr-label" x="60" y="52.5" text-anchor="middle"></text><text class="scr-value" x="60" y="70" text-anchor="middle"></text></g>
       <rect class="dark" x="44" y="86" width="32" height="12" rx="5"/>
-      <circle class="led" cx="52" cy="92" r="2.2" fill="#34d399"/><circle class="led" cx="60" cy="92" r="2.2" fill="#fbbf24"/><circle class="led" cx="68" cy="92" r="2.2" fill="#f472b6"/>
-      ${eyes(47, 73, 58)}${cheeks(37, 83, 70)}${mouth(60, 70)}`,
+      <circle class="led" cx="52" cy="92" r="2.2" fill="#34d399"/><circle class="led" cx="60" cy="92" r="2.2" fill="#fbbf24"/><circle class="led" cx="68" cy="92" r="2.2" fill="#f472b6"/>`,
   });
 
   window.renderSpecies = (species) => `<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" class="sp-${species}">${(SPECIES[species] || SPECIES.blob)()}</svg>`;

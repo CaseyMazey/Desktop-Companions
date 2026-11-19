@@ -110,6 +110,66 @@ body:has(#bubble.show) #name { opacity: 0 !important; }
 .cap { transform-box: fill-box; transform-origin: 50% 100%; }
 .cuddle .cap { animation: nuzzle 1.1s ease-in-out infinite reverse; }     /* Pilz: der Hut wiegt sich mit */
 
+/* ---------- Bip: Gesicht als Monitor ---------- */
+.screen-heart, .screen-text, .screen-mini { display: none; }
+.sp-robot .screen-heart { transform-box: fill-box; transform-origin: center; }
+.sp-robot text { fill: #67e8f9; font-family: Consolas, "Cascadia Mono", monospace; font-weight: 700; }
+.sp-robot .scr-label { font-size: 7.5px; letter-spacing: .5px; opacity: .8; }
+.sp-robot .scr-value { font-size: 15px; }
+.sp-robot .screen-mini { font-size: 8px; }
+/* Streicheln: Herz auf dem Bildschirm */
+.cuddle .sp-robot .screen-face, .scr-heart .sp-robot .screen-face { display: none; }
+.cuddle .sp-robot .screen-heart, .scr-heart .sp-robot .screen-heart { display: inline; animation: heartbeat .7s ease-in-out infinite; }
+@keyframes heartbeat { 0%,100% { transform: scale(1); } 30% { transform: scale(1.15); } 60% { transform: scale(.96); } }
+/* Werte (z. B. RAM 63 %) gross auf dem Bildschirm */
+.scr-text .sp-robot .screen-face, .scr-text .sp-robot .screen-heart { display: none; }
+.scr-text .sp-robot .screen-text { display: inline; }
+/* Timer klein unten im Gesicht statt Mund */
+.timer-on .sp-robot .mouth { display: none !important; }
+.timer-on .sp-robot .screen-mini { display: inline; }
+/* gespiegelt (Blick nach links): Schrift wieder richtig herum */
+#flip.left .sp-robot .screen-text, #flip.left .sp-robot .screen-mini { transform: scaleX(-1); transform-box: fill-box; transform-origin: center; }
+
+/* ---------- Charakter-Effekte (Begleiter-Modus) ---------- */
+.tongue, .minis { display: none; }
+.lick .sp-frog .tongue { display: inline; animation: lick .3s ease-out; }
+@keyframes lick { 0% { opacity: 0; } 15% { opacity: 1; } 100% { opacity: 1; } }
+.split .sp-blob .minis { display: inline; }
+.split .sp-blob .mini-l { transform-box: fill-box; transform-origin: 100% 100%; animation: pop-l 1.5s ease-out both; }
+.split .sp-blob .mini-r { transform-box: fill-box; transform-origin: 0% 100%; animation: pop-r 1.5s ease-out both; }
+@keyframes pop-l { 0% { transform: translateX(30px) scale(.2); } 25% { transform: translateX(0) scale(1); } 80% { transform: translateX(0) scale(1); } 100% { transform: translateX(30px) scale(.2); } }
+@keyframes pop-r { 0% { transform: translateX(-30px) scale(.2); } 25% { transform: translateX(0) scale(1); } 80% { transform: translateX(0) scale(1); } 100% { transform: translateX(-30px) scale(.2); } }
+#pet.roll #sprite { animation: roll 1s ease-in-out; }
+@keyframes roll { 0% { transform: rotate(0); } 40% { transform: translateY(-14px) rotate(180deg); } 100% { transform: rotate(360deg); } }
+.sneak .eye { transform: scaleY(.4); }
+#pet.sneak.walk #sprite { animation: waddle 1s ease-in-out infinite; }
+#prop { position: absolute; right: -18%; bottom: 2px; font-size: calc(var(--size) * .24); line-height: 1; pointer-events: none; opacity: 0; transform: scale(.4); transform-origin: 50% 100%;
+  transition: opacity .25s, transform .35s cubic-bezier(.3, 1.6, .5, 1); }
+#prop.show { opacity: 1; transform: scale(1); }
+
+/* ---------- Pilzi: Wetter ---------- */
+.sp-mushroom .snowcap, .sp-mushroom .scarf, .sp-mushroom .shades, .sp-mushroom .friend, .sp-mushroom .drops { display: none; }
+.wx-sun .sp-mushroom .shades { display: inline; }                         /* Sonne: Sonnenbrille */
+.wx-sun .sp-mushroom .eyes, .wx-sun .sp-mushroom .eyes-happy, .wx-sun .sp-mushroom .eyes-closed { visibility: hidden; }
+.wx-rain .sp-mushroom .friend { display: inline; }                        /* Regen: ein Pilzfreund kommt … */
+.wx-rain .sp-mushroom .drops { display: inline; animation: drops 1.1s linear infinite; } /* … und es tropft */
+@keyframes drops { from { transform: translateY(-8px); opacity: 0; } 30% { opacity: 1; } to { transform: translateY(14px); opacity: 0; } }
+.wx-snow .sp-mushroom .snowcap { display: inline; }                       /* Schnee: weisse Haube */
+.wx-cold .sp-mushroom .scarf { display: inline; }                         /* Kaelte: Schal */
+#pet.wx-windy:has(.sp-mushroom) #flip { transform: scale(.8); }            /* Wind: macht sich klein … */
+#pet.wx-windy:has(.sp-mushroom) #flip.left { transform: scale(-.8, .8); }
+.wx-windy .sp-mushroom .cap { animation: windy 1.4s ease-in-out infinite; } /* … und der Hut wackelt */
+@keyframes windy { 0%,100% { transform: rotate(-3deg); } 50% { transform: rotate(4deg); } }
+
+/* ---------- Watschel: seitlich auf dem Bauch rutschen ---------- */
+.sp-penguin .slide-pose { display: none; }
+#pet.sliding .sp-penguin .stand { display: none; }
+#pet.sliding .sp-penguin .slide-pose { display: inline; }
+#pet.sliding #sprite { animation: slide-bob .3s ease-in-out infinite alternate; }
+.sp-penguin .puffs { animation: puffs .25s linear infinite alternate; }
+@keyframes slide-bob { from { transform: translateY(0) rotate(-1.5deg); } to { transform: translateY(-1.5px) rotate(1deg); } }
+@keyframes puffs { from { opacity: .3; transform: translateX(2px); } to { opacity: .9; transform: translateX(-3px); } }
+
 /* ---------- Talente ---------- */
 /* Stimmungen fuer Talente: strecken (Katze), Augen zuhalten (Panda), ein-/ausatmen (Pinguin) */
 .stretch .eyes, .cover .eyes, .inhale .eyes, .exhale .eyes { display: none; }

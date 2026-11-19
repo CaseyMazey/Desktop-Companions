@@ -45,13 +45,13 @@ const TALENTS = {
   penguin: { title: 'Atem-Pause', character: 'tiefenentspannt, cool, durch nichts aus der Ruhe zu bringen', desc: 'Rechtsklick → „Atem-Pause“: eine Minute zusammen atmen, Watschel atmet sichtbar mit. Schlägt das ab und zu auch selbst vor.', options: [] },
   bunny: {
     title: 'Zeit & Timer', character: 'nervös, immer in Eile, besessen von Pünktlichkeit',
-    desc: 'Rechtsklick → „Erinnere mich in …“: ein schneller Timer. Auf Wunsch sagt Hoppel zur vollen Stunde die Uhrzeit an.',
+    desc: 'Zählt mit, wie lange der PC gesperrt war oder schlief (z. B. wenn du den Arbeitsplatz verlässt), und sagt es dir beim Entsperren. Rechtsklick → „Erinnere mich in …“: ein schneller Timer. Auf Wunsch sagt Hoppel zur vollen Stunde die Uhrzeit an.',
     options: [{ key: 'hourly', type: 'bool', label: 'Zur vollen Stunde die Uhrzeit ansagen (8–20 Uhr)', def: true }],
   },
   panda: { title: 'Augenpause (20-20-20)', character: 'faul, gemütlich, Genießer', desc: 'Alle 20 Minuten am Bildschirm: 20 Sekunden in die Ferne schauen. Bambus hält sich solange selbst die Augen zu.', options: [] },
   axolotl: {
     title: 'Lob', character: 'dein größter Fan, unendlich positiv, Cheerleader',
-    desc: 'Freut sich über jeden fertigen Auftrag (3C, Claude, andere Apps) und zählt abends zusammen, was du geschafft hast.',
+    desc: 'Klick auf Lotti, wenn du eine Aufgabe erledigt hast: Sie zählt mit, sagt jedes Mal etwas Liebes und freut sich immer mehr, je mehr du schaffst. Freut sich auch über fertige Aufträge (3C, Claude) und zählt abends zusammen.',
     options: [{ key: 'summary', type: 'time', label: 'Tagesrückblick um', def: '17:30' }],
   },
   dragon: {
@@ -62,7 +62,11 @@ const TALENTS = {
       { key: 'backupTime', type: 'time', label: 'um', def: '15:00' },
     ],
   },
-  mushroom: { title: 'Pausen-Garten', character: 'still, geduldig, naturverbunden, philosophisch', desc: 'Jede echte Pause (5 Minuten weg vom Rechner) lässt neben Pilzi etwas wachsen. Nichts welkt – jeden Tag ein neuer Garten.', options: [] },
+  mushroom: {
+    title: 'Pausen-Garten & Wetter', character: 'still, geduldig, naturverbunden, philosophisch',
+    desc: 'Jede echte Pause (5 Minuten weg vom Rechner) lässt neben Pilzi etwas wachsen. Mit Ort passt er sich dem Wetter an: Sonne = Sonnenbrille, Regen = ein Pilzfreund kommt, Wind = er macht sich klein, Schnee = weißer Hut, Kälte = Schal. Der Ort geht dafür an open-meteo.com.',
+    options: [{ key: 'place', type: 'text', label: 'Ort fürs Wetter (z. B. Berlin) – leer lassen, wenn du das nicht willst', def: '' }],
+  },
   robot: { title: 'Fokus-Timer', character: 'logisch, nimmt alles wörtlich, lernt Gefühle', desc: 'Rechtsklick → „Fokus starten“: 25 Minuten Arbeit, 5 Minuten Pause, der Countdown steht über Bip.', options: [] },
 };
 
@@ -77,11 +81,11 @@ const COMPANION_DESC = {
   owl: 'Erzählt ab und zu interessante Fakten – auch mit anderen Apps, dann seltener. Mit Nook verbunden: fragt sie Karteikarten aus Nook ab und sagt 10 Sekunden später die Antwort. Info: Fakten heute bzw. Anzahl der Karten.',
   frog: 'Mehr Kalauer und Hüpfer. Info: die Temperatur heute (mit Ort).',
   penguin: 'Gibt öfter ruhige Sätze zum Durchatmen. Info: Atem-Pausen heute.',
-  bunny: 'Sagt nervös die Uhrzeit und hoppelt herum. Info: die aktuelle Uhrzeit.',
+  bunny: 'Sagt nervös die Uhrzeit, sprintet herum und hat Panik vor der vollen Stunde. Info: Uhrzeit und wie lange der PC heute gesperrt war.',
   panda: 'Hält öfter ein Nickerchen und kaut Bambus. Info: Nickerchen heute.',
-  axolotl: 'Lobt dich öfter, einfach so. Info: was du heute geschafft hast.',
+  axolotl: 'Lobt dich öfter, einfach so, und schwenkt Pompons. Ohne App ist ein Klick auf Lotti „Aufgabe erledigt“. Info: was du heute geschafft hast.',
   dragon: 'Gibt öfter Energie-Tipps (Schlaf, Wasser, Pausen, frische Luft). Info: dein Akkustand.',
-  mushroom: 'Sagt öfter stille Naturweisheiten. Info: wie groß dein Garten heute ist.',
+  mushroom: 'Sagt öfter stille Naturweisheiten, erzählt morgens, wie er sich ans Wetter angepasst hat, und Pilzfreunde kommen nach langen Pausen. Info: Wetter und Garten.',
   robot: 'Erzählt Technik-Fakten und lernt Gefühle. Info: Fokus-Minuten heute.',
 };
 for (const [sp, d] of Object.entries(COMPANION_DESC)) if (TALENTS[sp]) TALENTS[sp].companion = d;
@@ -151,7 +155,7 @@ function talentDue(pet, mem, ctx, rnd = Math.random) {
   if (mem.day !== day) {
     mem.day = day; mem.count = 0; mem.once = {};
     if (pet.species === 'mushroom') mem.garden = 0;
-    Object.assign(mem, { naps: 0, facts: 0, events: 0, focusMin: 0, breaths: 0, pets: 0 }); // Tageszaehler fuer die Info
+    Object.assign(mem, { naps: 0, facts: 0, events: 0, focusMin: 0, breaths: 0, pets: 0, glasses: 0, flies: 0, scares: 0, panics: 0, tricks: 0 }); // Tageszaehler
   }
   const sinceMin = (k) => (mem[k] ? (now - mem[k]) / 60000 : Infinity);
   const onceToday = (k) => { if (mem.once[k]) return false; mem.once[k] = true; return true; };
@@ -331,15 +335,132 @@ function companionDue(pet, mem, ctx, rnd = Math.random) {
     return { text: pick(FACTS, rnd), mood: 'talk', ms: 9000 };
   }
   if (!companionMode(pet)) return null;
+  // besondere Momente, die an etwas Echtem haengen (Rueckkehr, Uhrzeit, Meilensteine, Wetter) – unabhaengig vom Takt
+  const moment = characterMoment(pet, mem, ctx, rnd);
+  if (moment) return moment;
   if (sinceMin < (mem.compGap || 25) || ctx.activeMin < 3) return null;
   mem.compAt = now.getTime(); mem.compGap = 20 + rnd() * 15; // alle 20–35 Minuten
   const r = rnd();
-  if (pet.species === 'ghost' && r < 0.35) return { action: 'scare' };
-  if ((pet.species === 'cat' || pet.species === 'panda') && r < 0.3) { mem.naps = (mem.naps || 0) + 1; return { text: pet.species === 'cat' ? '*rollt sich zusammen* Nicht stören. 😼💤' : 'Mmmh … nur fünf Minuten … 🐼💤', mood: 'sleep', ms: 4000, action: 'nap' }; }
-  if ((pet.species === 'bunny' || pet.species === 'frog' || pet.species === 'blob') && r < 0.3) return { text: '', mood: 'happy', action: 'hop' };
-  const list = COMPANION[pet.species];
+  const sp = pet.species;
+  // eigene Aktionen je Tier (den Text dazu baut der Hauptprozess, weil er die Nachbarn und Systemwerte kennt)
+  if (sp === 'ghost' && r < 0.35) return { action: 'scare' };
+  if (sp === 'cat') { if (r < 0.25) return { action: 'territory' }; if (r < 0.4) return { action: 'gift' }; }
+  if ((sp === 'cat' || sp === 'panda') && r < 0.6 && r >= (sp === 'cat' ? 0.4 : 0.35)) { mem.naps = (mem.naps || 0) + 1; return { text: sp === 'cat' ? '*rollt sich zusammen* Nicht stören. 😼💤' : 'Mmmh … nur fünf Minuten … 🐼💤', mood: 'sleep', ms: 4000, action: 'nap' }; }
+  if (sp === 'panda') { if (r < 0.15) return { action: 'roll', text: '*purzelt* … Hoppla. Absicht. 🐼', mood: 'happy', ms: 4000 }; if (r < 0.35) return { action: 'yawn' }; }
+  if (sp === 'bird' && r < 0.45) return { action: 'gossip' };
+  if (sp === 'beau' && r < 0.3) return { action: 'trick' };
+  if (sp === 'fox' && r < 0.3) return { action: 'sneak' };
+  if (sp === 'penguin' && r < 0.45) return { action: 'slide', text: 'Wiiiii! 🐧💨', mood: 'happy', ms: 2500 };
+  if (sp === 'bunny' && r < 0.3) return { action: 'sprint', text: 'Keine Zeit, keine Zeit! 🐰💨', mood: 'alert', ms: 2500 };
+  if (sp === 'robot' && r < 0.5) return { action: 'sysreport' };
+  if (sp === 'axolotl' && r < 0.2) return { action: 'pompom', text: 'Tschakka! Du schaffst das! 🎉🩷', mood: 'happy', ms: 4000 };
+  if ((sp === 'frog' || sp === 'blob') && r < 0.3) return { text: '', mood: 'happy', action: 'hop' };
+  const list = COMPANION[sp];
   if (!list || !list.length) return null;
   return { text: fillCompanion(pick(list, rnd), pet, mem, ctx), mood: pet.species === 'beau' ? 'greet' : 'talk', ms: 8000 };
+}
+
+// ---------- Hoppel: zaehlt, wie lange der PC gesperrt war oder schlief ----------
+const fmtDur = (min) => (min < 60 ? `${min} ${min === 1 ? 'Minute' : 'Minuten'}` : `${Math.floor(min / 60)} Std. ${min % 60} Min.`);
+const fmtClock = (min) => `${Math.floor(min / 60)}:${String(min % 60).padStart(2, '0')}`;
+// min: diese Sperre in Minuten, total: heute insgesamt, how: 'lock' (gesperrt) oder 'sleep' (Ruhezustand)
+function lockLine(min, total, how = 'lock', rnd = Math.random) {
+  const what = how === 'sleep' ? 'im Ruhezustand' : 'gesperrt';
+  const intro = min >= 60 ? pick(['DA BIST DU JA!!', 'ENDLICH!!', 'Ich dachte schon, du kommst nie wieder!!'], rnd)
+    : min >= 15 ? pick(['Da bist du ja!', 'Wieder da!', 'Puh, endlich!'], rnd) : pick(['Schon zurück?', 'Oh, hallo!', 'Wieder da!'], rnd);
+  return `${intro} Der PC war ${fmtDur(min)} ${what} – ich hab mitgezählt! Jede Sekunde! Heute insgesamt: ${fmtClock(total)}. 🐰⏱️`;
+}
+
+// ---------- Lotti: Klick = Aufgabe erledigt, je mehr, desto groesser die Freude ----------
+function lottiPraise(n, rnd = Math.random) {
+  const tier = n >= 10 ? [
+    `${n} AUFGABEN!!! DU BIST EINE LEGENDE! Ich werde Lieder über dich schreiben! 🎉👑🩷`,
+    `${n}! ${n}!! Ich hab keine Worte mehr! Nur noch Konfetti! 🎊🎊🎊`,
+    `Aufgabe Nummer ${n}! Ist das überhaupt legal, so produktiv zu sein?! 🩷🔥`,
+  ] : n >= 5 ? [
+    `Schon ${n} Aufgaben! Du bist nicht zu stoppen! 🎉🎉`,
+    `${n} geschafft! Ich hüpfe vor Freude! Hüpf! Hüpf! 🩷🎉`,
+    `Nummer ${n}! Heute ist DEIN Tag! 🌟🎉`,
+  ] : n >= 3 ? [
+    `${n} Aufgaben erledigt! Du bist so gut! 🎉`,
+    `Und noch eine! Das sind schon ${n}! Ich bin so stolz! 🩷`,
+    `${n}! Du läufst dich richtig warm! ✨`,
+  ] : n === 2 ? [
+    'Zwei! Schon zwei! Du bist großartig! 🩷',
+    'Noch eine geschafft! Weiter so! ✨',
+  ] : [
+    'Erste Aufgabe erledigt! Ich wusste, dass du das kannst! 🩷',
+    'Geschafft! Das war super! 🎉',
+    'Yay! Die erste! Jetzt bist du warm gelaufen! 🩷',
+  ];
+  return pick(tier, rnd);
+}
+
+// ---------- Pilzi: passt sich dem Wetter an ----------
+// Wetter (Tagesvorhersage) -> Aussehen: Sonne = Sonnenbrille, Regen = Pilzfreund, Wind = kleiner, Schnee = Schneemuetze, kalt = Schal
+function weatherLook(w) {
+  if (!w || w.missing) return null;
+  const rain = w.rain >= 50 || [51, 53, 55, 61, 63, 65, 80, 81, 82, 95, 96, 99].includes(w.code);
+  const snow = [71, 73, 75, 77, 85, 86].includes(w.code);
+  const sky = snow ? 'snow' : rain ? 'rain' : [0, 1].includes(w.code) ? 'sun' : [45, 48].includes(w.code) ? 'fog' : 'cloud';
+  return { sky, windy: (w.wind || 0) >= 30, cold: w.max <= 3, hot: w.max >= 27 };
+}
+const SKY = { sun: '☀️ sonnig', rain: '🌧️ Regen', snow: '❄️ Schnee', fog: '🌫️ Nebel', cloud: '⛅ bewölkt' };
+function weatherSay(look) {
+  if (!look) return '';
+  if (look.sky === 'sun') return '… Sonne. *setzt die Sonnenbrille auf* 😎';
+  if (look.sky === 'rain') return '… Regen. Wachswetter. Mein Pilzfreund ist auch gekommen. 🌧️🍄';
+  if (look.sky === 'snow') return '… Schnee. Mein Hut ist ganz weiß. Schön still heute. ❄️';
+  if (look.windy) return '… Wind. Ich mach mich klein. *duckt sich* 🍃';
+  if (look.cold) return '… Kalt heute. Gut, dass ich meinen Schal habe. 🧣';
+  if (look.sky === 'fog') return '… Nebel. Der Wald schläft noch.';
+  return '… Wolken. Ein ruhiger Tag zum Wachsen. ⛅';
+}
+
+// Momente mit echtem Bezug (Begleiter-Modus): einmal am Tag oder an Ereignisse gebunden
+function characterMoment(pet, mem, ctx, rnd) {
+  const now = ctx.now;
+  const min = minOfDay(now);
+  mem.moments = mem.moments && mem.moments.day === dayOf(now) ? mem.moments : { day: dayOf(now) };
+  const once = (k) => { if (mem.moments[k]) return false; mem.moments[k] = true; return true; };
+  const w = Object.values(ctx.weather || {}).find((x) => x && !x.missing);
+  const rainy = w && (w.rain >= 50 || [51, 53, 55, 61, 63, 65, 80, 81, 82, 95].includes(w.code));
+  switch (pet.species) {
+    case 'bunny':
+      // (wie lange der PC gesperrt war, meldet Hoppel direkt beim Entsperren – siehe lockLine)
+      if (now.getMinutes() >= 55 && now.getMinutes() < 57 && min >= 8 * 60 && min < 20 * 60 && (mem.panics || 0) < 3 && once(`panic${now.getHours()}`)) {
+        mem.panics = (mem.panics || 0) + 1;
+        return { text: 'Gleich ist volle Stunde!! Gleich! GLEICH! … Was passiert dann eigentlich? 🐰', mood: 'alert', ms: 5000 };
+      }
+      return null;
+    case 'bird':
+      if (min >= 7 * 60 && min < 11 * 60 && ctx.activeMin >= 2 && once('paper')) return { action: 'paper' };
+      return null;
+    case 'fox':
+      if (!workday(now)) return null;
+      if (min >= 9 * 60 && min < 11 * 60 + 30 && ctx.activeMin >= 2 && once('plan')) return { text: 'Psst. Plan des Tages: Was ist heute das EINE, das du schaffen willst? Merk’s dir – ich frag heute Abend nach. 🦊', mood: 'talk', ms: 10000 };
+      {
+        const end = minutesOf((pet.talent && pet.talent.endTime) || '17:00');
+        if (min >= end - 75 && min < end - 45 && once('check')) return { text: 'Und? Hast du dein EINES geschafft? Wenn ja: Ich bin beeindruckt. Wenn nein: Morgen ist auch noch ein Plan. 🦊', mood: 'talk', ms: 10000 };
+      }
+      return null;
+    case 'axolotl': // Lotti zaehlt Aufgaben per Klick (siehe lottiPraise) – hier nichts Zeitgesteuertes
+      return null;
+    case 'mushroom': {
+      // Wetter des eigenen Orts: einmal am Tag sagt Pilzi, wie er sich angepasst hat (das Aussehen setzt der Hauptprozess)
+      const look = weatherLook(pet.talent && pet.talent.place && ctx.weather ? ctx.weather[pet.talent.place.toLowerCase()] : null);
+      if (look && min >= 8 * 60 && once('weather')) return { text: weatherSay(look), mood: 'happy', ms: 7000 };
+      return null;
+    }
+    case 'cat':
+      if (ctx.activeMin >= 120 && (!mem.lastPetAt || now - mem.lastPetAt > 3 * 3600000) && once('offended')) return { text: 'Seit Stunden streichelt mich niemand. Ich bin beleidigt. 😾 … Das war ein Hinweis.', mood: 'sad', ms: 7000 };
+      return null;
+    case 'frog':
+      if (rainy && min >= 7 * 60 && once('umbrella')) return { text: 'Regen! Ich hab meinen Schirm dabei. ☂️ Du hoffentlich auch! Quak!', mood: 'happy', ms: 6000, action: { prop: '☂️', ms: 3 * 3600000 } };
+      return null;
+    default:
+      return null;
+  }
 }
 
 // Info am Namensschild beim Drueberfahren (nur Begleiter-Modus; Huhu mit Nook zeigt die Kartenzahl)
@@ -355,20 +476,26 @@ function companionInfo(pet, mem, ctx) {
   const hh = `${ctx.now.getHours()}:${String(ctx.now.getMinutes()).padStart(2, '0')}`;
   switch (pet.species) {
     case 'ghost': return `👻 Mut: ${Math.min(100, 3 + (mem.pets || 0) * 7)} %`;
-    case 'cat': return `😼 Laune: ${['verschlafen', 'gnädig', 'königlich', 'huldvoll', 'unbeeindruckt'][ctx.now.getHours() % 5]}`;
-    case 'blob': return '💚 Stimmung: SUPER';
+    case 'cat': {
+      const since = mem.lastPetAt ? (ctx.now - mem.lastPetAt) / 60000 : Infinity;
+      return since < 30 ? '😽 Laune: gnädig' : since > 180 && ctx.activeMin >= 120 ? '😾 Laune: beleidigt' : `😼 Laune: ${['verschlafen', 'königlich', 'huldvoll', 'unbeeindruckt'][ctx.now.getHours() % 4]}`;
+    }
+    case 'blob': return `🥛 ${mem.glasses || 0} ${mem.glasses === 1 ? 'Glas' : 'Gläser'} · Stimmung SUPER`;
     case 'bird': return `📰 ${mem.events || 0} Meldungen heute`;
     case 'beau': return `🌙 ${moonOf(ctx.now)}`;
     case 'fox': return `⏳ ${fillCompanion('{feierabend}', pet, mem, ctx).replace(/^Noch /, 'noch ')}`;
     case 'owl': return `📚 ${mem.facts || 0} Fakten heute`;
-    case 'frog': return w && !w.missing ? `🌡️ ${Math.round(w.min)}–${Math.round(w.max)} °C` : '🐸 Quak! (Ort in den Einstellungen)';
+    case 'frog': return `${w && !w.missing ? `🌡️ ${Math.round(w.min)}–${Math.round(w.max)} °C · ` : ''}🪰 ${mem.flies || 0} gefangen`;
     case 'penguin': return `🫧 Atem-Pausen heute: ${mem.breaths || 0}`;
-    case 'bunny': return `⏰ ${hh}`;
+    case 'bunny': return `⏰ ${hh}${mem.lockDay === dayOf(ctx.now) && mem.lockTotal ? ` · 🔒 ${fmtClock(mem.lockTotal)} gesperrt` : ''}`;
     case 'panda': return `💤 Nickerchen heute: ${mem.naps || 0}`;
-    case 'axolotl': return `🎉 heute geschafft: ${mem.winsDay === dayOf(ctx.now) ? mem.wins || 0 : 0}`;
+    case 'axolotl': return `🎉 heute geschafft: ${mem.winsDay === dayOf(ctx.now) ? mem.wins || 0 : 0} · Klick = erledigt`;
     case 'dragon': return b && typeof b.level === 'number' ? `🔋 ${Math.round(b.level * 100)} %${b.charging ? ' ⚡' : ''}` : '🔌 kein Akku – volle Energie';
-    case 'mushroom': return `🌱 Garten: ${mem.garden || 0} ${mem.garden === 1 ? 'Pflanze' : 'Pflanzen'}`;
-    case 'robot': return `🎯 Fokus heute: ${mem.focusMin || 0} Min`;
+    case 'mushroom': {
+      const look = weatherLook(pet.talent.place && ctx.weather ? ctx.weather[pet.talent.place.toLowerCase()] : null);
+      return `${look ? `${SKY[look.sky]}${look.windy ? ', windig' : ''} · ` : ''}🌱 ${mem.garden || 0}`;
+    }
+    case 'robot': return `${ctx.sys ? `RAM ${ctx.sys.ram} % · ` : ''}🎯 Fokus ${mem.focusMin || 0} Min`;
     default: return '';
   }
 }
@@ -397,4 +524,4 @@ const FOCUS_LINES = {
 };
 const TIMER_LINES = { set: (m) => `Okay! In ${m} Minuten sag ich Bescheid! Versprochen! ⏰🐰`, done: (m) => `ZEIT IST UM! ${m} Minuten sind vorbei! ⏰🐰` };
 
-module.exports = { COMPANION, FACTS, SCARED, companionDue, companionInfo, companionMode, moonOf, TALENTS, LINES, normalizeTalent, talentDue, weatherLine, shortEvent, BREATH, FOCUS, FOCUS_LINES, TIMER_LINES, hhmm, weekOf };
+module.exports = { lockLine, lottiPraise, weatherLook, weatherSay, fmtClock, COMPANION, FACTS, SCARED, companionDue, companionInfo, companionMode, moonOf, TALENTS, LINES, normalizeTalent, talentDue, weatherLine, shortEvent, BREATH, FOCUS, FOCUS_LINES, TIMER_LINES, hhmm, weekOf };

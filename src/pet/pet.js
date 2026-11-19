@@ -40,6 +40,7 @@ function applyPet(p) {
   updateNight();
   if (on('dragon')) watchBattery();              // Drache: Akku im Blick
   if (p.species !== 'mushroom') showGarden(0);
+  if (p.species === 'panda') pandaWake();
 }
 
 // Namensschild beim Drueberfahren: Name, im Begleiter-Modus mit Info (z. B. "Funke · 🔋 78 %")
@@ -69,19 +70,119 @@ async function watchBattery() {
     report();
   } catch { /* kein Akku */ }
 }
-// Timer ueber dem Pet (Fokus des Roboters, Erinnerung des Hasen)
+// Timer ueber dem Pet (Erinnerung des Hasen); beim Roboter steht er unten auf seinem Bildschirm
 const timerEl = document.getElementById('timer');
 let timerTick = null;
 function showTimer(t) {
   clearInterval(timerTick);
+  const robot = pet && pet.species === 'robot';
+  petEl.classList.toggle('timer-on', !!(t && robot));
   if (!t) { timerEl.classList.remove('show'); return; }
+  const mini = sprite.querySelector('.screen-mini');
   const draw = () => {
     const s = Math.max(0, Math.round((t.endsAt - Date.now()) / 1000));
-    timerEl.textContent = `${t.label} ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+    const mmss = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+    timerEl.textContent = `${t.label} ${mmss}`;
+    if (robot && mini) mini.textContent = mmss;
   };
   draw();
-  timerEl.classList.add('show');
+  timerEl.classList.toggle('show', !robot);
   timerTick = setInterval(draw, 1000);
+}
+
+// Bip: Bildschirm zeigt kurz einen Wert ("RAM 63%") oder ein Herz
+let screenTimer = null;
+function showScreen({ label = '', value = '', heart = false, ms = 8000 } = {}) {
+  if (!pet || pet.species !== 'robot') return;
+  clearTimeout(screenTimer);
+  const l = sprite.querySelector('.scr-label'); const v = sprite.querySelector('.scr-value');
+  if (l) l.textContent = String(label).slice(0, 10);
+  if (v) v.textContent = String(value).slice(0, 7);
+  petEl.classList.toggle('scr-heart', !!heart);
+  petEl.classList.toggle('scr-text', !heart);
+  screenTimer = setTimeout(() => petEl.classList.remove('scr-heart', 'scr-text'), Math.min(30000, ms));
+}
+
+// Requisit neben dem Pet (🐭 Geschenk, 📰 Zeitung, 🥛 Glas, ☂️ Schirm, 🎉 Pompons, ⏱️ Taschenuhr)
+const propEl = document.getElementById('prop');
+let propTimer = null;
+function showProp(p) {
+  clearTimeout(propTimer);
+  if (!p || !p.emoji) { propEl.classList.remove('show'); return; }
+  propEl.textContent = String(p.emoji).slice(0, 4);
+  propEl.classList.remove('show'); void propEl.offsetWidth; propEl.classList.add('show');
+  if (p.ms) propTimer = setTimeout(() => propEl.classList.remove('show'), Math.min(p.ms, 4 * 3600000));
+}
+// kurze Effekte als Klasse (roll = Purzelbaum, sneak = Schleichen, split = Blubb teilt sich)
+const fxTimers = {};
+function fx({ name, ms = 1500 } = {}) {
+  if (!['roll', 'sneak', 'split'].includes(name)) return;
+  clearTimeout(fxTimers[name]);
+  petEl.classList.add(name);
+  fxTimers[name] = setTimeout(() => petEl.classList.remove(name), Math.min(ms, 20000));
+}
+
+// ---------- Charakter-Verhalten direkt im Fenster (nur Begleiter-Modus) ----------
+const companion = () => !!(pet && pet.kind === 'none' && pet.talent && pet.talent.enabled && !pet.muted);
+let localSaidAt = {};
+function localSay(key, text, gapMs) {
+  const now = Date.now();
+  if (bubble.classList.contains('show') || now - (localSaidAt[key] || 0) < gapMs) return false;
+  localSaidAt[key] = now;
+  showBubble({ text, ms: 3200, mood: 'talk', open: false });
+  return true;
+}
+// Quak: Zunge schnappt nach dem Mauszeiger, wenn er nah am Maul ist
+let tongueAt = 0;
+function frogTongue(x, y) {
+  const now = Date.now();
+  if (now - tongueAt < 3500 || cuddling || dragging) return;
+  const svg = sprite.querySelector('svg'); const tongue = sprite.querySelector('.tongue');
+  if (!svg || !tongue) return;
+  const r = svg.getBoundingClientRect();
+  let sx = ((x - r.left) / r.width) * 120; const sy = ((y - r.top) / r.height) * 120;
+  if (flip.classList.contains('left')) sx = 120 - sx;
+  const dx = sx - 60; const dy = sy - 76; const d = Math.hypot(dx, dy);
+  if (d > 70 || d < 18) return;
+  tongueAt = now;
+  const k = Math.min(1, 52 / d);
+  tongue.setAttribute('x2', String(60 + dx * k)); tongue.setAttribute('y2', String(76 + dy * k));
+  petEl.classList.remove('lick'); void petEl.offsetWidth; petEl.classList.add('lick');
+  setTimeout(() => petEl.classList.remove('lick'), 320);
+  if (Math.random() < 0.5) { api.fly(); if (Math.random() < 0.4) setTimeout(() => localSay('fly', 'Hab dich! 🪰 … ach, nur der Mauszeiger. Quak.', 60000), 350); }
+}
+// Watschel: hektische Maus in der Naehe -> "Ganz ruhig"
+let lastMove = null; let speedAvg = 0;
+function trackSpeed(x, y) {
+  const now = performance.now();
+  if (lastMove) {
+    const dt = Math.max(1, now - lastMove.t);
+    speedAvg = speedAvg * 0.8 + (Math.hypot(x - lastMove.x, y - lastMove.y) / dt) * 0.2;
+  }
+  lastMove = { x, y, t: now };
+  if (speedAvg > 3.2) { speedAvg = 0; localSay('calm', 'Ganz ruhig … Die Maus läuft nicht weg. 🐧', 180000); }
+}
+// Mauz: haut nach dem Mauszeiger, wenn er zu lange ueber ihr schwebt (ohne Streicheln)
+let hoverSince = 0;
+function catSwat() {
+  if (!over || cuddling || dragging) { hoverSince = 0; return; }
+  if (!hoverSince) { hoverSince = Date.now(); return; }
+  if (Date.now() - hoverSince > 3000 && localSay('swat', '*haut nach dem Mauszeiger* 🐾 … Zu nah.', 120000)) { flash('alert', 700); hoverSince = 0; }
+}
+// Bambus: doest ein, wenn eine Weile niemand in der Naehe ist; Maus oder Streicheln weckt ihn
+let dozeTimer = null;
+function pandaWake() {
+  clearTimeout(dozeTimer);
+  if (!(pet && pet.species === 'panda' && companion())) return;
+  if (mood === 'sleep' && !pet.muted) { mood = 'idle'; if (!moodTimer) setMood(mood); }
+  dozeTimer = setTimeout(() => { if (companion() && pet.species === 'panda' && !walking) { mood = 'sleep'; if (!moodTimer) setMood(mood); } }, 90000);
+}
+function companionMouse(e) {
+  if (!companion()) return;
+  if (pet.species === 'frog') frogTongue(e.clientX, e.clientY);
+  else if (pet.species === 'penguin') trackSpeed(e.clientX, e.clientY);
+  else if (pet.species === 'cat') catSwat();
+  else if (pet.species === 'panda') pandaWake();
 }
 // Pilz: kleiner Garten neben dem Pet (waechst mit jeder Pause, jeden Tag neu)
 const gardenEl = document.getElementById('garden');
@@ -170,6 +271,7 @@ document.addEventListener('mousemove', (e) => {
   updateHover(e.clientX, e.clientY);
   watchCursor(e.clientX, e.clientY);
   strokeMove(e);
+  companionMouse(e);
 });
 document.addEventListener('mouseleave', () => {
   if (over && !dragging) { over = false; api.hover(false); }
@@ -210,7 +312,10 @@ function startCuddle() {
   cuddling = true;
   cuddleStart = performance.now();
   cuddleSaid = false;
-  petEl.classList.add('cuddle');
+  // Pilzi reagiert als Begleiter gemaechlich: erst nach gut zwei Sekunden
+  if (pet && pet.species === 'mushroom' && companion()) setTimeout(() => { if (cuddling) petEl.classList.add('cuddle'); }, 2200);
+  else petEl.classList.add('cuddle');
+  if (pet && pet.species === 'panda') pandaWake();
   api.petting(true);
   let n = 0;
   cuddleTimer = setInterval(() => {
@@ -258,6 +363,19 @@ api.on('pet:update', applyPet);
 api.on('pet:hover-reset', () => { over = false; });
 api.on('pet:say', showBubble);
 api.on('pet:timer', showTimer);
+api.on('pet:screen', showScreen);
+api.on('pet:prop', showProp);
+api.on('pet:fx', fx);
+api.on('pet:slide', (on) => petEl.classList.toggle('sliding', !!on));
+// Pilzi: Wetter-Aussehen (wx-sun, wx-rain, wx-snow, wx-fog, wx-cloud, dazu wx-windy, wx-cold, wx-hot)
+api.on('pet:weather', (look) => {
+  petEl.classList.remove('wx-sun', 'wx-rain', 'wx-snow', 'wx-fog', 'wx-cloud', 'wx-windy', 'wx-cold', 'wx-hot');
+  if (!look || !['sun', 'rain', 'snow', 'fog', 'cloud'].includes(look.sky)) return;
+  petEl.classList.add(`wx-${look.sky}`);
+  if (look.windy) petEl.classList.add('wx-windy');
+  if (look.cold) petEl.classList.add('wx-cold');
+  if (look.hot) petEl.classList.add('wx-hot');
+});
 api.on('pet:info', (t) => { info = typeof t === 'string' ? t.slice(0, 60) : ''; showName(); });
 api.on('pet:garden', (n) => showGarden(Math.max(0, Math.min(8, +n || 0))));
 // Stimmung kurz zeigen: 'happy' oder { mood: 'sleep', ms: 3500 } (Aktionen in Szenen)
