@@ -98,6 +98,7 @@ function renderEditor() {
   $('r-timed').value = r.timed.map((t) => `${t.time} ${t.text}`).join('\n');
   drawPet($('preview'), p);
   $('f-color').closest('label').hidden = p.species === 'beau'; // Beau: Fell und Hut sind fest
+  renderTalent(p.species, p.talent);
 
   main.querySelectorAll('input, select, textarea').forEach((el) => {
     if (el.id === 'f-kind') return;
@@ -130,6 +131,7 @@ function collect() {
     kind: $('f-kind').value,
     target: $('f-target').value,
     events: $('f-events').checked,
+    talent: collectTalent(),
     reminders: {
       enabled: $('r-enabled').checked,
       intervalMin: +$('r-interval').value,
@@ -147,7 +149,10 @@ function scheduleSave() {
   if (p) {
     // anderes Tier gewaehlt: dessen Standardfarbe uebernehmen (danach frei aenderbar)
     const sp = $('f-species');
-    if (sp.dataset.last && sp.dataset.last !== sp.value && data.speciesColors) $('f-color').value = data.speciesColors[sp.value] || $('f-color').value;
+    if (sp.dataset.last && sp.dataset.last !== sp.value) {
+      if (data.speciesColors) $('f-color').value = data.speciesColors[sp.value] || $('f-color').value;
+      renderTalent(sp.value, {}); // anderes Tier = anderes Talent (mit Standardwerten)
+    }
     sp.dataset.last = sp.value;
     const c = collect();
     drawPet($('preview'), { ...p, species: c.species, color: c.color });
@@ -182,6 +187,52 @@ async function changeKind() {
   renderEditor();
 }
 
+// ---------- Talent & Charakter des Tiers ----------
+const DAYS = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+function renderTalent(species, t = {}) {
+  const info = (data.talents || {})[species];
+  const box = $('talent-box');
+  box.hidden = !info;
+  if (!info) return;
+  box.dataset.species = species;
+  $('t-title').textContent = info.title;
+  $('t-character').textContent = `· ${info.character}`;
+  $('t-desc').textContent = info.desc;
+  $('t-enabled').checked = t.enabled !== false;
+  const opts = $('t-options');
+  opts.replaceChildren();
+  for (const o of info.options) {
+    const v = t[o.key] ?? o.def;
+    const label = document.createElement('label');
+    let input;
+    if (o.type === 'day') {
+      input = document.createElement('select');
+      DAYS.forEach((d, i) => input.add(new window.Option(d, String(i))));
+      input.value = String(v);
+    } else {
+      input = document.createElement('input');
+      input.type = o.type === 'bool' ? 'checkbox' : o.type === 'time' ? 'time' : 'text';
+      if (o.type === 'bool') input.checked = !!v; else input.value = v;
+      if (o.type === 'text') { input.maxLength = 60; input.spellcheck = false; }
+    }
+    input.dataset.key = o.key;
+    input.dataset.type = o.type;
+    if (o.type === 'bool') { label.className = 'check'; label.append(input, ` ${o.label}`); }
+    else { label.className = o.type === 'text' ? 'grow' : ''; label.append(o.label, input); }
+    input.addEventListener('input', scheduleSave);
+    input.addEventListener('change', scheduleSave);
+    opts.appendChild(label);
+  }
+}
+function collectTalent() {
+  if (!$('talent-box') || $('talent-box').hidden) return undefined;
+  const t = { enabled: $('t-enabled').checked };
+  for (const el of $('t-options').querySelectorAll('[data-key]')) {
+    t[el.dataset.key] = el.dataset.type === 'bool' ? el.checked : el.dataset.type === 'day' ? +el.value : el.value;
+  }
+  return t;
+}
+
 // Alle Presets als Auswahl, nach Abschnitten gruppiert
 function fillKinds(sel) {
   for (const [g, title] of Object.entries(data.groups || {})) {
@@ -192,19 +243,27 @@ function fillKinds(sel) {
   }
 }
 
-// Claude Code: Hook zum Eintragen in ~/.claude/settings.json (schickt "fertig" und "braucht dich" an die lokale Schnittstelle)
-function hookJson() {
-  const cmd = (type) => `curl -s -m 2 -X POST http://127.0.0.1:${data.port}/event -H "Content-Type: application/json" -d '{"app":"claude-code","type":"${type}"}'`;
-  const entry = (type) => [{ hooks: [{ type: 'command', command: cmd(type) }] }];
-  return JSON.stringify({ hooks: { Stop: entry('task-done'), Notification: entry('decision') } }, null, 2);
-}
-function showHook(kind) {
+// Claude / Claude Code: Hook in ~/.claude/settings.json (schickt "fertig" und "braucht dich" an die lokale Schnittstelle)
+async function showHook(kind) {
   const box = $('hook-box');
-  box.hidden = kind !== 'claudecode';
+  box.hidden = kind !== 'claudecode' && kind !== 'claude';
   if (box.hidden) return;
-  $('hook-code').textContent = hookJson();
+  const st = await api.hookStatus();
+  if (!$('hook-box')) return; // Editor inzwischen neu aufgebaut
+  const show = (s) => {
+    $('hook-status').textContent = s.installed ? '✓ Ist eingetragen – Claude meldet sich bei diesem Pet.' : 'Noch nicht eingetragen.';
+    $('hook-install').textContent = s.installed ? 'Erneut eintragen' : 'In Claude Code eintragen';
+    $('hook-install').className = s.installed ? '' : 'primary';
+  };
+  show(st);
+  $('hook-code').textContent = st.json;
+  $('hook-install').onclick = async () => {
+    const r = await api.hookInstall();
+    if (r.ok) show(r);
+    else $('hook-status').textContent = `Hat nicht geklappt: ${r.error}. Du kannst den Eintrag unten kopieren und selbst einfügen.`;
+  };
   $('hook-copy').onclick = async () => {
-    await api.copy(hookJson());
+    await api.copy(st.json);
     $('hook-copied').textContent = 'Kopiert ✓';
     setTimeout(() => { if ($('hook-copied')) $('hook-copied').textContent = ''; }, 1500);
   };

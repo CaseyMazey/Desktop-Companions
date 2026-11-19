@@ -87,18 +87,18 @@ const APPS = {
   // ---------- KI ----------
   claude: {
     label: 'Claude',
-    group: 'ai', icon: '✳️',
+    group: 'ai', icon: '✳️', source: 'Claude', listens: ['claude-code'],
     target: appOrWeb(CLAUDE_APP, 'https://claude.ai'),
-    hint: 'Öffnet Claude (die Desktop-App, sonst claude.ai). Ein Klick, und du kannst loslegen.',
-    eventsLabel: 'Meldungen über die lokale Schnittstelle anzeigen',
+    hint: 'Öffnet Claude und sagt Bescheid, wenn Claude (Code) fertig ist oder deine Entscheidung braucht – dafür einmal unten „In Claude Code eintragen“ klicken.',
+    eventsLabel: 'Melden, wenn Claude fertig ist oder eine Entscheidung braucht',
     reminders: off(['Frag doch Claude! ✳️', 'Steckst du fest? Zusammen mit Claude geht’s leichter.', 'Lass Claude den langweiligen Teil machen. 😌']),
-    events: false,
+    events: true,
   },
   claudecode: {
     label: 'Claude Code',
     group: 'ai', icon: '⌨️', source: 'Claude Code', listens: ['claude-code'],
     target: appOrWeb(CLAUDE_APP, 'https://claude.ai/code'),
-    hint: 'Sagt Bescheid, wenn Claude Code fertig ist oder deine Entscheidung braucht – dafür einmal den Hook unten in Claude Code eintragen.',
+    hint: 'Sagt Bescheid, wenn Claude Code fertig ist oder deine Entscheidung braucht – dafür einmal unten „In Claude Code eintragen“ klicken.',
     eventsLabel: 'Melden, wenn Claude Code fertig ist oder eine Entscheidung braucht',
     reminders: off(['Claude Code wartet auf deinen nächsten Auftrag. ⌨️', 'Kleiner Commit zwischendurch? 🌱']),
     events: true,

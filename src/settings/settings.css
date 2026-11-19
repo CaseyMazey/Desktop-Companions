@@ -103,3 +103,11 @@ dialog#create::backdrop { background: rgba(10, 8, 18, .6); }
 .create-foot label input { flex: 1; min-width: 0; }
 .create-foot button:disabled { opacity: .45; cursor: default; }
 .create-foot #create-summary { margin: 0 0 0 auto; }   /* Knoepfe bleiben rechts stehen, auch wenn der Text erscheint */
+/* Talent & Charakter */
+#talent-box .talent-head { margin: 0; }
+#talent-box .talent-head strong { font-size: 15px; }
+#talent-box #t-desc { margin: 0; }
+#t-options:empty { display: none; }
+.inline-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 6px 0; }
+.hook details { margin-top: 6px; }
+.hook summary { cursor: pointer; }

@@ -58,6 +58,14 @@
       </div>
     </fieldset>
 
+    <fieldset id="talent-box">
+      <legend>Talent &amp; Charakter</legend>
+      <p class="talent-head"><strong id="t-title"></strong> <span class="hint" id="t-character"></span></p>
+      <p class="hint" id="t-desc"></p>
+      <label class="check"><input type="checkbox" id="t-enabled"> Talent einschalten</label>
+      <div class="row" id="t-options"></div>
+    </fieldset>
+
     <fieldset>
       <legend>Verbindung</legend>
       <div class="row">
@@ -70,10 +78,17 @@
       </div>
       <label class="check"><input type="checkbox" id="f-events"> <span id="events-label">Meldungen der App anzeigen</span></label>
       <div class="hook" id="hook-box" hidden>
-        <p class="hint"><strong>Einmal einrichten:</strong> Damit Claude Code Bescheid sagt, diesen Hook in die Datei
-          <code>.claude/settings.json</code> in deinem Benutzerordner eintragen (hast du dort schon <code>"hooks"</code>, nur <code>Stop</code> und <code>Notification</code> ergänzen).</p>
-        <pre id="hook-code"></pre>
-        <button id="hook-copy" type="button">Kopieren</button> <span class="hint" id="hook-copied"></span>
+        <p class="hint"><strong>Einmal einrichten:</strong> Damit Claude Bescheid sagt, wenn es fertig ist oder dich braucht, muss Claude Code
+          den Pets eine Nachricht schicken. Das trägt ein kleiner Eintrag (Hook) in <code>.claude/settings.json</code> ein – gilt für Claude Code im Terminal und in der Claude-App.</p>
+        <div class="inline-row">
+          <button id="hook-install" type="button" class="primary">In Claude Code eintragen</button>
+          <span class="hint" id="hook-status" aria-live="polite"></span>
+        </div>
+        <details>
+          <summary class="hint">Lieber selbst eintragen?</summary>
+          <pre id="hook-code"></pre>
+          <button id="hook-copy" type="button">Kopieren</button> <span class="hint" id="hook-copied"></span>
+        </details>
       </div>
     </fieldset>
 

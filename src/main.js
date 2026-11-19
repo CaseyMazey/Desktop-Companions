@@ -1,6 +1,6 @@
 // Desktop Companions – Hauptprozess: ein durchsichtiges, immer sichtbares Fenster pro Pet, Tray-Menue, Einstellungen,
 // Erinnerungen, Gespraeche zwischen benachbarten Pets und der lokale Empfaenger fuer NEXUS & Co.
-const { app, BrowserWindow, ipcMain, screen, Menu, Tray, nativeImage, shell, dialog, desktopCapturer, clipboard } = require('electron');
+const { app, BrowserWindow, ipcMain, screen, Menu, Tray, nativeImage, shell, dialog, desktopCapturer, clipboard, powerMonitor } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
 const os = require('node:os');
@@ -9,6 +9,9 @@ const { APPS, SPECIES, BEAU, GROUPS } = require('./presets');
 const { createPet, createChosenPet, petsForEvent, normalizePet, normalizeState, dueReminder, pickMessage, neighborGroups, strollTarget, chatterDelay, freeSpot, KINDS } = require('./logic');
 const { pickScene, pettedLine } = require('./dialogues');
 const { startBridge, PORT } = require('./bridge');
+const { settingsFile, hookJson, hasHook, installHook } = require('./claudehook');
+const { TALENTS, talentDue, shortEvent, BREATH, FOCUS, FOCUS_LINES, TIMER_LINES } = require('./talents');
+const { startWatch } = require('./watch-win');
 const { Updater } = require('./updater');
 
 const SMOKE = process.argv.includes('--smoke');
@@ -29,7 +32,9 @@ const trayIcon = icon.resize({ width: 32, height: 32, quality: 'best' });
 let state = null;
 let tray = null;
 let settingsWin = null;
-let hidden = false;
+let hidden = false;                             // von Hand versteckt (Tray)
+let autoHidden = false;                         // von Buh versteckt (Meeting/Vollbild)
+const allHidden = () => hidden || autoHidden;
 let talking = false;                            // laeuft gerade ein Gespraech?
 const live = new Map();                         // id -> { win, mem, busyUntil, dragging, walking, inTalk }
 const groupNext = new Map();                    // Gruppe ("idA|idB|…") -> Zeitpunkt der naechsten Szene
@@ -99,7 +104,7 @@ function createPetWindow(pet) {
   win.loadFile(path.join(__dirname, 'pet', 'pet.html'), { query: { id: pet.id } });
   win.webContents.on('did-finish-load', () => { const p = petById(pet.id); if (p) win.webContents.send('pet:update', publicPet(p)); });
   // bei Skalierung (125 %, 150 %) legt Windows das Fenster schon ein paar Pixel zu gross an: einmal richtig setzen
-  win.once('ready-to-show', () => { placeWin(pet.id, pet.x, pet.y); if (!hidden && !pet.hidden) win.showInactive(); });
+  win.once('ready-to-show', () => { placeWin(pet.id, pet.x, pet.y); if (!allHidden() && !pet.hidden) win.showInactive(); });
   win.webContents.on('will-navigate', (e) => e.preventDefault());
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   const entry = { win, mem: {}, busyUntil: 0, dragging: null, walking: null, inTalk: false, petting: false, pettedAt: 0, pos: { x: pet.x, y: pet.y }, capturing: false };
@@ -126,7 +131,7 @@ function refreshPet(pet) {
   placeWin(pet.id, e.pos.x, e.pos.y);
   send(pet.id, 'pet:update', publicPet(pet));
 }
-const publicPet = (p) => ({ id: p.id, name: p.name, species: p.species, color: p.color, size: p.size, muted: p.muted, kind: p.kind });
+const publicPet = (p) => ({ id: p.id, name: p.name, species: p.species, color: p.color, size: p.size, muted: p.muted, kind: p.kind, talent: p.talent });
 
 // ---------- Sprechen ----------
 // mood: happy (huepfen) | greet (winken) | sad | alert | talk | sleep; ms: wie lange die Blase steht; open: Klick auf die Blase oeffnet die App
@@ -222,6 +227,7 @@ ipcMain.on('pet:context', (ev) => {
     { label: pet.name, enabled: false },
     { type: 'separator' },
     ...(pet.target ? [{ label: `${APPS[pet.kind].label === 'Keine' ? 'App' : APPS[pet.kind].label} öffnen`, click: () => openApp(pet) }] : []),
+    ...talentMenu(pet),
     { label: 'Sag was!', click: () => speakNow(pet) },
     { label: 'Ausblenden (in den Einstellungen wieder einblenden)', click: () => setPetHidden(pet.id, true) },
     { label: pet.muted ? 'Aufwecken' : 'Schlafen legen (keine Erinnerungen)', click: () => { pet.muted = !pet.muted; save(); refreshPet(pet); if (!pet.muted) say(pet.id, 'Bin wieder wach! ☀️', { mood: 'happy' }); } },
@@ -310,7 +316,7 @@ function makeRoom(pet, prefer = 0) {
 
 // Herumlaufen: frei wandernde Pets ueberall auf der Linie, die anderen nur ein paar Schritte um ihren Platz
 function maybeWander() {
-  if (hidden) return;
+  if (allHidden()) return;
   for (const pet of state.pets) {
     const e = live.get(pet.id);
     if (!e || pet.hidden || e.dragging || e.walking || e.inTalk || e.petting) continue;
@@ -356,7 +362,7 @@ async function runScene(groupIds) {
 }
 // Gruppen nebeneinander stehender Pets finden; jede Gruppe plaudert nach ihrer eigenen Wartezeit
 function maybeChat(force = false) {
-  if (talking || hidden || state.settings.chatter === 'aus') return null;
+  if (talking || allHidden() || state.settings.chatter === 'aus') return null;
   const bounds = [];
   for (const pet of state.pets) {
     const e = live.get(pet.id);
@@ -397,6 +403,7 @@ function checkReminders() {
 
 // ---------- Meldungen anderer Apps ----------
 function onAppEvent(ev) {
+  noteEventForTalents(ev);
   const targets = petsForEvent(state.pets, ev);
   const where = ev.project ? ` (${ev.project})` : '';
   for (const pet of targets) {
@@ -408,6 +415,163 @@ function onAppEvent(ev) {
   }
   return targets.length;
 }
+
+// ---------- Talente (Plan vom 2026-11-19): jedes Tier hilft auf seine Art ----------
+// Aktivitaet: weg = 5 Minuten ohne Maus/Tastatur; zurueck = Pause vorbei (zaehlt fuer Garten, Bote, Streck-Pause …)
+const activity = { away: false, awaySince: 0, activeSince: Date.now(), backFromBreak: 0 };
+const missed = [];          // Meldungen, waehrend du weg warst (fuer den Boten)
+let doneCount = 0;          // neu erledigte Auftraege seit dem letzten Takt (fuer das Lob)
+let battery = null;         // { level, charging } aus einem Drachen-Fenster
+const weather = {};         // ort -> { day, min, max, rain, code }
+const weatherBusy = new Set();
+const talentOn = (p, sp) => p.species === sp && p.talent && p.talent.enabled && !p.hidden;
+
+function sampleActivity() {
+  const idle = powerMonitor.getSystemIdleTime(); // Sekunden ohne Eingabe
+  const now = Date.now();
+  if (!activity.away && idle >= 300) { activity.away = true; activity.awaySince = now - idle * 1000; }
+  else if (activity.away && idle < 30) {
+    activity.away = false;
+    activity.backFromBreak = Math.max(1, Math.round((now - activity.awaySince) / 60000));
+    activity.activeSince = now;
+  }
+}
+
+async function fetchWeather(place) {
+  const key = place.toLowerCase();
+  if (weatherBusy.has(key)) return;
+  weatherBusy.add(key);
+  try {
+    const g = await (await fetch(`https://geocoding-api.open-meteo.com/v1/search?count=1&language=de&name=${encodeURIComponent(place)}`)).json();
+    const loc = g.results && g.results[0];
+    if (!loc) { weather[key] = { day: new Date().toDateString(), missing: true }; return; }
+    const f = await (await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${loc.latitude}&longitude=${loc.longitude}&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,weather_code&timezone=auto&forecast_days=1`)).json();
+    const d = f.daily;
+    weather[key] = { day: new Date().toDateString(), max: d.temperature_2m_max[0], min: d.temperature_2m_min[0], rain: d.precipitation_probability_max[0] ?? 0, code: d.weather_code[0] };
+  } catch (e) { log('[wetter]', e.message); } finally { weatherBusy.delete(key); }
+}
+
+function applyTalentAction(pet, action) {
+  if (action === 'sleep') send(pet.id, 'pet:mood', { mood: 'sleep', ms: 15000 });       // Fuchs rollt sich ein
+  else if (action === 'cover') send(pet.id, 'pet:mood', { mood: 'cover', ms: 20000 });  // Panda haelt sich die Augen zu
+  else if (action === 'stretch') send(pet.id, 'pet:mood', { mood: 'stretch', ms: 4000 }); // Katze streckt sich
+  else if (action && action.garden) send(pet.id, 'pet:garden', action.garden);           // Pilz: Garten waechst
+}
+
+function talentTick() {
+  sampleActivity();
+  const today = new Date().toDateString();
+  for (const p of state.pets) {
+    const place = talentOn(p, 'frog') && p.talent.place;
+    if (place && (!weather[place.toLowerCase()] || weather[place.toLowerCase()].day !== today)) fetchWeather(place);
+  }
+  const ctx = { now: new Date(), activeMin: (Date.now() - activity.activeSince) / 60000, away: activity.away, backFromBreak: activity.backFromBreak, missed: missed.slice(), done: doneCount, battery, weather };
+  for (const pet of state.pets) {
+    const e = live.get(pet.id);
+    if (!e || pet.hidden || allHidden() || e.inTalk || e.dragging || e.petting || e.breath) continue;
+    if (Date.now() < e.busyUntil && pet.species !== 'axolotl') continue;
+    e.tmem = e.tmem || {};
+    const r = talentDue(pet, e.tmem, ctx);
+    if (!r) continue;
+    if (r.text) say(pet.id, r.text, { mood: r.mood, ms: r.ms, open: !!(r.open && pet.target) });
+    if (r.action) applyTalentAction(pet, r.action);
+  }
+  doneCount = 0;
+  if (activity.backFromBreak) { activity.backFromBreak = 0; missed.length = 0; }
+}
+
+// Was eine Meldung fuer die Talente bedeutet (Bote sammelt, Axolotl zaehlt)
+function noteEventForTalents(ev) {
+  const src = { nexus: '3C', 'claude-code': 'Claude Code' }[ev.app] || (APPS[ev.app] && APPS[ev.app].label) || ev.app || 'App';
+  if (ev.type === 'task-done') doneCount++;
+  if (activity.away || powerMonitor.getSystemIdleTime() >= 300) { missed.push({ short: shortEvent(ev, src) }); if (missed.length > 20) missed.shift(); }
+}
+
+// ----- Timer: Fokus (Roboter), Erinnerung (Hase), Atem-Pause (Pinguin) -----
+function clearTimer(e) { if (e && e.timer) { clearTimeout(e.timer.handle); e.timer = null; } }
+function showTimer(id, t) { send(id, 'pet:timer', t ? { label: t.label, endsAt: t.endsAt } : null); }
+function startFocus(pet, phase = 'work') {
+  const e = live.get(pet.id);
+  if (!e) return;
+  clearTimer(e);
+  const mins = FOCUS[phase];
+  const endsAt = Date.now() + mins * 60000;
+  e.timer = { kind: 'focus', phase, endsAt, label: phase === 'work' ? 'Fokus' : 'Pause' };
+  e.timer.handle = setTimeout(() => {
+    if (phase === 'work') { say(pet.id, FOCUS_LINES.rest, { mood: 'happy', ms: 12000 }); startFocus(pet, 'rest'); }
+    else { clearTimer(e); showTimer(pet.id, null); say(pet.id, FOCUS_LINES.again, { mood: 'alert', ms: 12000 }); }
+  }, mins * 60000);
+  showTimer(pet.id, e.timer);
+  if (phase === 'work') say(pet.id, FOCUS_LINES.start, { mood: 'happy', ms: 6000 });
+}
+function stopTimer(pet, line) {
+  const e = live.get(pet.id);
+  if (!e || !e.timer) return;
+  clearTimer(e);
+  showTimer(pet.id, null);
+  if (line) say(pet.id, line, { mood: 'talk', ms: 4000 });
+}
+function startReminderTimer(pet, mins) {
+  const e = live.get(pet.id);
+  if (!e) return;
+  clearTimer(e);
+  e.timer = { kind: 'remind', endsAt: Date.now() + mins * 60000, label: `${mins} Min` };
+  e.timer.handle = setTimeout(() => { clearTimer(e); showTimer(pet.id, null); say(pet.id, TIMER_LINES.done(mins), { mood: 'alert', ms: 30000 }); }, mins * 60000);
+  showTimer(pet.id, e.timer);
+  say(pet.id, TIMER_LINES.set(mins), { mood: 'happy', ms: 4000 });
+}
+async function breathe(pet) {
+  const e = live.get(pet.id);
+  if (!e || e.breath) return;
+  e.breath = true;
+  stopWalk(pet.id);
+  try {
+    for (const step of BREATH) {
+      if (!live.has(pet.id) || !e.breath) break;
+      say(pet.id, step.text, { mood: 'talk', ms: step.ms });
+      send(pet.id, 'pet:mood', { mood: step.mood, ms: step.ms });
+      await sleep(step.ms);
+    }
+  } finally { e.breath = false; }
+}
+// Rechtsklick-Eintraege je Talent
+function talentMenu(pet) {
+  if (!pet.talent || !pet.talent.enabled) return [];
+  const e = live.get(pet.id);
+  const t = e && e.timer;
+  if (pet.species === 'robot') return t && t.kind === 'focus' ? [{ label: '⏹ Fokus beenden', click: () => stopTimer(pet, FOCUS_LINES.stop) }] : [{ label: '🤖 Fokus starten (25 + 5 Min)', click: () => startFocus(pet) }];
+  if (pet.species === 'bunny') {
+    const items = [5, 10, 15, 30, 60].map((m) => ({ label: `in ${m} Minuten`, click: () => startReminderTimer(pet, m) }));
+    return [{ label: '⏰ Erinnere mich …', submenu: items }, ...(t ? [{ label: '⏹ Timer abbrechen', click: () => stopTimer(pet, 'Okay, Timer gestoppt! Puh. 🐰') }] : [])];
+  }
+  if (pet.species === 'penguin') return e && e.breath ? [{ label: '⏹ Atem-Pause beenden', click: () => { e.breath = false; } }] : [{ label: '🫧 Atem-Pause (1 Minute)', click: () => breathe(pet) }];
+  return [];
+}
+
+// ----- Buh: Diskret (Meeting/Vollbild -> alle Pets verstecken) -----
+let stopWatch = null;
+let watchState = { mic: false, cam: false, full: false };
+function applyVisibility() {
+  for (const [id, e] of live) (allHidden() || petById(id)?.hidden) ? e.win.hide() : e.win.showInactive();
+  updateTray();
+}
+function onWatch(s) {
+  watchState = s;
+  const ghosts = state.pets.filter((p) => talentOn(p, 'ghost'));
+  const want = ghosts.some((g) => (g.talent.hideMeeting && (s.mic || s.cam)) || (g.talent.hideFullscreen && s.full));
+  if (want === autoHidden) return;
+  autoHidden = want;
+  for (const id of live.keys()) stopWalk(id);
+  applyVisibility();
+  if (!want && !hidden && ghosts[0]) setTimeout(() => say(ghosts[0].id, 'Psst … ist es vorbei? Wir sind wieder da. 👻', { mood: 'talk', ms: 4000 }), 600);
+}
+// Waechter nur laufen lassen, solange ein Buh mit Talent da ist
+function updateWatch() {
+  const need = state.pets.some((p) => talentOn(p, 'ghost') && (p.talent.hideMeeting || p.talent.hideFullscreen));
+  if (need && !stopWatch && !SMOKE) stopWatch = startWatch(onWatch, log);
+  if (!need && stopWatch) { stopWatch(); stopWatch = null; if (autoHidden) { autoHidden = false; applyVisibility(); } }
+}
+ipcMain.on('pet:battery', (_ev, b) => { if (b && typeof b.level === 'number') battery = { level: Math.max(0, Math.min(1, b.level)), charging: !!b.charging }; });
 
 // ---------- Pets verwalten ----------
 // Beau: Kater mit Hexenhut, verbunden mit Nook, eigene Sprueche
@@ -435,15 +599,17 @@ function placeNewPet(pet) {
   createPetWindow(pet);
   save();
   updateTray();
+  updateWatch();
   setTimeout(() => say(pet.id, pet.species === 'beau' ? 'Mrrp! Ich bin Beau. 🎩 *winkt*' : `Hallo, ich bin ${pet.name}! 👋`, { mood: pet.species === 'beau' ? 'greet' : 'happy' }), 900);
   return pet;
 }
 function removePet(id) {
   state.pets = state.pets.filter((p) => p.id !== id);
   const e = live.get(id);
-  if (e) { stopWalk(id); e.win.destroy(); live.delete(id); }
+  if (e) { stopWalk(id); clearTimer(e); e.breath = false; e.win.destroy(); live.delete(id); }
   save();
   updateTray();
+  updateWatch();
   sendSettings();
 }
 
@@ -474,6 +640,7 @@ function settingsPayload() {
     groups: GROUPS,
     species: Object.fromEntries(Object.entries(SPECIES).map(([k, v]) => [k, v.label])),
     speciesColors: Object.fromEntries(Object.entries(SPECIES).map(([k, v]) => [k, v.color])),
+    talents: TALENTS,
     port: PORT,
     packaged: app.isPackaged,
     version: app.getVersion(),
@@ -493,14 +660,23 @@ ipcMain.handle('settings:save-pet', (_e, data) => {
   // Wandern ausgeschaltet: ab jetzt in der Naehe des aktuellen Platzes bleiben
   if (old.wander && !pet.wander && live.get(pet.id)) pet.homeX = posOf(pet.id)[0];
   state.pets[state.pets.indexOf(old)] = pet;
+  // anderes Tier oder Talent aus: laufenden Timer (Fokus, Erinnerung) beenden
+  if (old.species !== pet.species || !pet.talent.enabled) { const e = live.get(pet.id); if (e && e.timer) { clearTimer(e); showTimer(pet.id, null); } }
   save();
   refreshPet(pet);
   updateTray();
+  updateWatch();
   return pet;
 });
 ipcMain.handle('settings:add-pet', (_e, choice) => (typeof choice === 'object' && choice
   ? addChosenPet({ kind: String(choice.kind || ''), species: String(choice.species || ''), name: String(choice.name || '') })
   : addPet(KINDS.includes(choice) || choice === 'beau' ? choice : 'none')));
+// Claude-Code-Hook: Status und Eintragen per Knopf (schreibt ~/.claude/settings.json, vorher Sicherung .bak)
+ipcMain.handle('settings:hook-status', () => ({ installed: hasHook(settingsFile(), PORT), file: settingsFile(), json: hookJson(PORT) }));
+ipcMain.handle('settings:hook-install', () => {
+  try { installHook(settingsFile(), PORT); return { ok: true, installed: hasHook(settingsFile(), PORT) }; }
+  catch (e) { log('[claude-hook]', e.message); return { ok: false, error: e.message }; }
+});
 ipcMain.handle('settings:copy', (_e, text) => { clipboard.writeText(String(text).slice(0, 4000)); return true; });
 ipcMain.handle('settings:remove-pet', (_e, id) => { removePet(id); return true; });
 ipcMain.handle('settings:test-pet', (_e, id) => { const p = petById(id); if (p) speakNow(p); });
@@ -591,10 +767,11 @@ function setPetHidden(id, on) {
   const e = live.get(id);
   if (!pet) return null;
   pet.hidden = !!on;
+  updateWatch();
   if (e) {
     stopWalk(id);
     if (pet.hidden) { e.win.hide(); e.capturing = false; }
-    else if (!hidden) { e.win.showInactive(); setTimeout(() => say(id, 'Da bin ich wieder! 👋', { mood: 'happy', ms: 3500 }), 300); }
+    else if (!allHidden()) { e.win.showInactive(); setTimeout(() => say(id, 'Da bin ich wieder! 👋', { mood: 'happy', ms: 3500 }), 300); }
   }
   save();
   updateTray();
@@ -604,7 +781,7 @@ function setPetHidden(id, on) {
 ipcMain.handle('settings:set-hidden', (_e, id, on) => setPetHidden(id, on));
 function toggleHidden() {
   hidden = !hidden;
-  for (const [id, e] of live) (hidden || petById(id)?.hidden) ? e.win.hide() : e.win.showInactive();
+  applyVisibility();
   updateTray();
 }
 
@@ -686,6 +863,8 @@ app.whenReady().then(() => {
   });
   updater.start();
   setInterval(checkReminders, 30000);
+  setInterval(talentTick, 30000);
+  updateWatch();
   setInterval(() => maybeChat(), 12000);
   setInterval(maybeWander, 9000);
   for (const ev of ['display-removed', 'display-added', 'display-metrics-changed']) screen.on(ev, scheduleRebuild);

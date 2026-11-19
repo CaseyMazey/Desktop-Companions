@@ -45,6 +45,27 @@ const PAIR = [
   { need: [{}, { species: 'beau' }], lines: [[0, 'Beau, darf ich mal deinen Hut aufsetzen?'], [1, 'Nein. Niemals. 🎩', 'alert'], [0, 'Nur ganz kurz?'], [1, 'Der Hut bleibt, wo er ist.']] },
   { need: [{}, { species: 'beau' }], lines: [[0, 'Kannst du eigentlich zaubern, Beau?'], [1, 'Natürlich. Pass auf…'], [1, '✨ Mrrp! ✨', 'happy'], [0, 'Es ist nichts passiert.'], [1, 'Doch. Du lächelst. 😼']] },
   { need: [{ species: 'beau' }, {}], lines: [[0, '*schnurr*'], [1, 'Was machst du da?'], [0, 'Ich schnurre für deine Konzentration.'], [1, 'Oh, danke! 😌', 'happy']] },
+
+  // ---------- Charaktere (2026-11-19): jedes Tier klingt nach sich selbst ----------
+  { need: [{ species: 'ghost' }, {}], lines: [[0, 'Oh … ähm … Entschuldigung, {1}, steh ich dir im Weg?'], [1, 'Nein, alles gut!'], [0, 'Okay … Entschuldigung, dass ich gefragt hab. 👻'], [1, 'Buh … 😄']] },
+  { need: [{ species: 'cat' }, {}], lines: [[0, 'Pff.'], [1, 'Was ist los, {0}?'], [0, 'Nichts. Ich bin nur besser als alle hier.'], [1, 'Willst du kuscheln?'], [0, '… Ja. Aber nur kurz. 😼', 'happy']] },
+  { need: [{ species: 'blob' }, {}], lines: [[0, 'WEISST DU, WAS TOLL IST?!'], [1, 'Was denn?'], [0, 'ALLES! 💚', 'happy'], [1, 'Okay, fair.']] },
+  { need: [{ species: 'bird' }, {}], lines: [[0, 'Eilmeldung! Eilmeldung!', 'alert'], [1, 'Was ist passiert?!', 'alert'], [0, 'Unser Mensch hat gerade gelächelt!'], [1, 'Sensationell. 📰', 'happy']] },
+  { need: [{ species: 'fox' }, { species: 'bunny' }], lines: [[0, 'Psst, {1} … deine Uhr geht vor.'], [1, 'WAS?! Wie viel?!', 'alert'], [0, 'Keine Ahnung. Ich wollte nur dein Gesicht sehen. 🦊'], [1, 'DAS IST NICHT LUSTIG! 🐰', 'sad']] },
+  { need: [{ species: 'fox' }, {}], lines: [[0, 'Ich hab einen Plan.'], [1, 'Oh nein.'], [0, 'Wir machen um fünf Feierabend.'], [1, 'Oh … das ist ein guter Plan! 🦊', 'happy']] },
+  { need: [{ species: 'owl' }, { species: 'robot' }], lines: [[0, 'Gefühle, {1}, sind keine Rechenaufgabe.'], [1, 'BIP. VERSTANDEN.'], [0, 'Wirklich?'], [1, '… NEIN. 🤖'], [0, 'Fürwahr, ein Anfang. 🦉', 'happy']] },
+  { need: [{ species: 'owl' }, {}], lines: [[0, 'Wusstest du, dass Eulen ihren Kopf fast ganz herumdrehen können?'], [1, 'Echt?!'], [0, 'Interessant, nicht wahr? Wissen ist schön. 🦉']] },
+  { need: [{ species: 'frog' }, {}], lines: [[0, 'Was macht ein Frosch im Büro?'], [1, 'Was?'], [0, 'Er hüpft von Meeting zu Meeting! QUAK! 🐸', 'happy'], [1, '… 😐'], [0, 'Okay, der war schlecht.']] },
+  { need: [{ species: 'penguin' }, { species: 'bunny' }], lines: [[1, 'Wir sind zu spät! Wir sind SO zu spät!', 'alert'], [0, 'Ganz ruhig, {1}. Wofür denn?'], [1, '… Ich weiß es nicht mehr.'], [0, 'Siehst du. Atmen. 🐧'], ['all', null, 'happy']] },
+  { need: [{ species: 'penguin' }, {}], lines: [[1, 'Bist du eigentlich nie gestresst, {0}?'], [0, 'Ich bin ein Pinguin. Ich bin immer cool. 🐧'], [1, 'Haha!'], [0, 'Das war kein Witz.']] },
+  { need: [{ species: 'bunny' }, {}], lines: [[0, 'Wie spät ist es?! Wie spät ist es?!', 'alert'], [1, 'Eine Minute später als eben.'], [0, 'OH NEIN! 🐰', 'alert']] },
+  { need: [{ species: 'panda' }, {}], lines: [[1, 'Was machst du heute, {0}?'], [0, 'Mmmh … nichts.'], [1, 'Und morgen?'], [0, 'Da mach ich weiter. 🐼', 'sleep']] },
+  { need: [{ species: 'axolotl' }, {}], lines: [[0, '{1}! Du bist so toll!', 'happy'], [1, 'Ich hab doch gar nichts gemacht.'], [0, 'Und trotzdem toll! 🩷', 'happy']] },
+  { need: [{ species: 'dragon' }, { species: 'mushroom' }], lines: [[0, 'Keine Sorge, {1}. Ich beschütze dich! 🔥'], [1, '… Wovor?'], [0, 'Vor … allem!', 'alert'], [1, '… Danke. 🍄', 'happy']] },
+  { need: [{ species: 'dragon' }, {}], lines: [[0, 'Fürchtet euch! Ich bin ein mächtiger Drache! 🔥', 'alert'], [1, 'Du bist so groß wie ein Toast.'], [0, 'Ein MÄCHTIGER Toast!'], ['all', '😂', 'happy']] },
+  { need: [{ species: 'mushroom' }, {}], lines: [[0, '…'], [1, 'Alles okay, {0}?'], [0, '… Ich wachse.'], [1, 'Gerade jetzt?'], [0, 'Immer. 🌱']] },
+  { need: [{ species: 'robot' }, {}], lines: [[0, 'BIP. FRAGE: WAS IST „GEMÜTLICH“?'], [1, 'Wenn man sich wohlfühlt. Wie jetzt.'], [0, 'BIP … SPEICHERE: JETZT = GEMÜTLICH. 🤖💙', 'happy']] },
+  { need: [{ species: 'cat' }, { species: 'blob' }], lines: [[1, '{0}! {0}! Spielen wir?!', 'happy'], [0, 'Pff. Nein.'], [1, 'Bitte?'], [0, '… Na gut. Einmal. 😼'], ['all', '💚', 'happy']] },
 ];
 
 const GROUP = [
@@ -63,6 +84,10 @@ const GROUP = [
   // ---------- passend zu den Apps ----------
   { need: [{ kind: 'nexus' }, { kind: 'dan' }, { kind: 'nook' }], lines: [[0, 'Claude ist fertig! ✅'], [1, 'Ich schreib’s in den Bericht! 📝'], [2, 'Und dann gibt’s eine Pause. 🌱'], ['all', 'Team! ✨', 'happy']] },
   { need: [{ species: 'beau' }, {}, {}], lines: [[0, 'Ich habe ein Treffen einberufen. 🎩'], [1, 'Worum geht’s?'], [0, 'Um … Leckerlis.'], [2, 'Bestes Treffen ever!', 'happy'], ['all', '🐟✨', 'happy']] },
+  // ---------- Charaktere in der Gruppe ----------
+  { need: [{ species: 'bird' }, {}, {}], lines: [[0, 'Leute! Leute! Ich hab Neuigkeiten!', 'alert'], [1, 'Was denn?'], [0, 'Ich weiß es nicht mehr. Aber es war aufregend! 🐦'], [2, 'Typisch. 😄'], ['all', null, 'happy']] },
+  { need: [{ species: 'axolotl' }, {}, {}], lines: [[0, 'Ich will euch was sagen …'], [1, '?'], [2, '?'], [0, 'IHR SEID ALLE SO TOLL! 🩷', 'happy'], ['all', '🥹', 'happy']] },
+  { need: [{ species: 'robot' }, { species: 'owl' }, {}], lines: [[0, 'BIP. ICH HABE BERECHNET: GRUPPENKUSCHELN = OPTIMAL.'], [1, 'Fürwahr, eine weise Rechnung. 🦉'], [2, 'Kuscheln! 🤗'], ['all', '💞', 'happy']] },
 
   // ---------- zu viert und mehr ----------
   { lines: [[0, 'Wir sind ja richtig viele!'], [1, 'Party? 🎉'], [2, 'Party!'], [3, 'PARTY!', 'happy'], ['all', '🥳', 'happy']] },
@@ -116,11 +141,11 @@ function pickScene(pets, rand = Math.random, recent = []) {
 
 // Was ein Pet sagt, wenn es eine Weile gestreichelt wird (je Tierart)
 const PETTED = {
-  cat: ['*schnurr* 😌', 'Mrrrr … genau da. 💕', '*schnurr schnurr*', 'Noch ein bisschen? 🥺'],
+  cat: ['Pff … okay. Weiter. 😼', '*schnurrt widerwillig*', 'Ich mag das nicht. … Nicht aufhören.', 'Du darfst. Ausnahmsweise. *schnurr*'],
   beau: ['*schnurr* 🎩', 'Mrrp … aber nicht den Hut! 😼', 'Ein Zauberer genießt still. *schnurr*', 'Genau hinterm Ohr. 💛'],
-  blob: ['Hihi, das kitzelt! 💚', '*wabbel* 😊', 'Ich werd ganz weich … noch weicher. 🫠', 'Mehr! 💕'],
-  ghost: ['Uuuh … das ist schön. 👻💜', 'Du kannst mich anfassen?! 🥹', '*schwebt glücklich*', 'Gruselig gemütlich. 💜'],
-  bird: ['Tschirp! 💙', '*plustert sich auf* 🪶', 'Piep piep … schön! 💙', 'Die Federn liegen jetzt perfekt. ✨'],
+  blob: ['HIHI, DAS KITZELT! 💚', '*wabbel wabbel* DAS IST DAS BESTE!', 'Ich werd ganz weich … noch weicher! 🫠', 'MEHR! MEHR! 💕'],
+  ghost: ['Oh … ähm … das ist schön. Entschuldigung. 👻', 'Du … du kannst mich anfassen? 🥹', '*wird ganz durchsichtig vor Glück*', 'Danke … sorry … danke. 💜'],
+  bird: ['Eilmeldung: Ich werde gestreichelt! 🐦', '*plustert sich auf* Das muss ich allen erzählen!', 'Tschirp! Schlagzeile des Tages! 💙', 'Die Federn liegen jetzt perfekt. Weitersagen! ✨'],
   fox: ['*wedelt mit dem buschigen Schwanz* 🦊', 'Hinter den Ohren, bitte! 🧡', 'Mmmh, so flauschig fühl ich mich gleich doppelt.', '*kuschelt sich ein*'],
   owl: ['Huhu! 🦉', '*plustert die Federn auf*', 'Sehr weise von dir, mich zu streicheln.', 'Uhuu … gemütlich. 🌙'],
   frog: ['Quak! 💚', '*quakt zufrieden*', 'Schön glitschig, oder? 🐸', 'Ich könnte vor Freude hüpfen!'],

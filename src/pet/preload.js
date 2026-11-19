@@ -1,6 +1,6 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
-const CHANNELS = new Set(['pet:update', 'pet:say', 'pet:mood', 'pet:walk', 'pet:face', 'pet:dragging', 'pet:hover-reset', 'pet:pointer']);
+const CHANNELS = new Set(['pet:update', 'pet:say', 'pet:mood', 'pet:walk', 'pet:face', 'pet:dragging', 'pet:hover-reset', 'pet:pointer', 'pet:timer', 'pet:garden']);
 contextBridge.exposeInMainWorld('petApi', {
   on: (ch, cb) => { if (CHANNELS.has(ch)) ipcRenderer.on(ch, (_e, ...a) => cb(...a)); },
   hover: (over) => ipcRenderer.send('pet:hover', !!over),
@@ -9,5 +9,6 @@ contextBridge.exposeInMainWorld('petApi', {
   context: () => ipcRenderer.send('pet:context'),
   petting: (on) => ipcRenderer.send('pet:petting', !!on),
   petted: () => ipcRenderer.send('pet:petted'),
+  battery: (b) => ipcRenderer.send('pet:battery', { level: +b.level, charging: !!b.charging }),
   bubbleClick: (open) => ipcRenderer.send('pet:bubble-click', !!open),
 });

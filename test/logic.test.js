@@ -82,7 +82,8 @@ test('Szenen zu zweit: passend zu den Apps, Rollen richtig besetzt, Namen einges
   for (let k = 0; k < 80; k++) {
     const g = pickScene([{ id: 'a', kind: 'none', species: 'blob', name: 'A' }, { id: 'b', kind: 'none', species: 'bird', name: 'B' }]);
     const s = PAIR[+g.key.slice(1)];
-    assert.ok(!s.need || s.need.every((r) => !r.kind && !r.species), 'Pets ohne App bekommen nur allgemeine Szenen');
+    // ohne App: keine App-Szenen; Charakter-Szenen nur fuer die Tiere, die wirklich da sind
+    assert.ok(!s.need || s.need.every((r) => !r.kind && (!r.species || ['blob', 'bird'].includes(r.species))), 'Pets ohne App bekommen nur passende Szenen');
     assert.ok(g.lines.every((l) => !l.text || !/\{\d\}/.test(l.text)));
   }
 });

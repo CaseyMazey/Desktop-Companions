@@ -1,5 +1,6 @@
 // Reine Logik ohne Electron (wird in test/ geprueft): Daten pruefen, Erinnerungen faellig?, Nachbarn finden.
 const { APPS, SPECIES, NAMES, DEFAULT_SPECIES, speciesName } = require('./presets');
+const { normalizeTalent } = require('./talents');
 
 const KINDS = Object.keys(APPS);
 const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -67,6 +68,7 @@ function normalizePet(p) {
     y: Number.isFinite(p.y) ? Math.round(p.y) : null,
     homeX: Number.isFinite(p.homeX) ? Math.round(p.homeX) : null, // wo es abgesetzt wurde (fuer "nicht frei wandern")
     reminders: normalizeReminders(p.reminders, kind),
+    talent: normalizeTalent(species, p.talent), // Talent des Tiers (an/aus und Optionen), siehe talents.js
   };
 }
 
@@ -78,10 +80,13 @@ function normalizeState(s) {
   const g = s.settings && typeof s.settings === 'object' ? s.settings : {};
   // Einmalig (2026-11-18): bisher wanderten alle Pets standardmaessig frei – jetzt bleiben sie an ihrem Platz
   if (g.stayDefault !== true) for (const p of pets) { p.wander = false; if (p.homeX == null) p.homeX = p.x; }
+  // Einmalig (0.8.0): "Claude"-Pets hoeren jetzt auch auf Claude Code – in 0.7.0 waren ihre Meldungen aus
+  if (g.claudeEvents !== true) for (const p of pets) if (p.kind === 'claude') p.events = true;
   return {
     pets,
     settings: {
       stayDefault: true,
+      claudeEvents: true,
       chatter: ['aus', 'selten', 'normal', 'oft'].includes(g.chatter) ? g.chatter : 'normal',
       autostart: !!g.autostart,
       autoUpdate: g.autoUpdate !== false,

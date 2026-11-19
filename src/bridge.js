@@ -1,8 +1,10 @@
 // Kleiner lokaler Empfaenger fuer Meldungen anderer Apps (nur 127.0.0.1).
 //   POST http://127.0.0.1:47811/event   Content-Type: application/json
-//   { "app": "nexus" | "dan" | "nook" | "custom", "type": "task-done" | "task-error" | "decision" | "say", "text"?: "...", "project"?: "...", "pet"?: "<id>" }
+//   POST http://127.0.0.1:47811/hook/claude-code   rohe Hook-Daten von Claude Code (siehe claudehook.js)
+//   { "app": "nexus" | "dan" | "nook" | "custom" | "claude-code" | …, "type": "task-done" | "task-error" | "decision" | "say", "text"?: "...", "project"?: "...", "pet"?: "<id>" }
 // Nur JSON wird angenommen: Webseiten im Browser koennen so ohne CORS-Freigabe nichts schicken.
 const http = require('node:http');
+const { eventFromHook, MARK } = require('./claudehook');
 
 const PORT = Number(process.env.PETS_PORT) || 47811;
 const TYPES = new Set(['task-done', 'task-error', 'decision', 'say']);
@@ -23,15 +25,27 @@ function startBridge(onEvent, log = console.log, port = PORT) {
     const host = String(req.headers.host || '');
     if (host !== `127.0.0.1:${port}` && host !== `localhost:${port}`) { res.writeHead(403).end(); return; }
     if (req.method === 'GET' && req.url === '/ping') { res.writeHead(200, { 'Content-Type': 'application/json' }).end('{"pets":true}'); return; }
-    if (req.method !== 'POST' || req.url !== '/event') { res.writeHead(404).end(); return; }
+    // /hook/claude-code: die rohen Hook-Daten von Claude Code (Stop, Notification) – siehe claudehook.js
+    const isHook = req.url === MARK;
+    if (req.method !== 'POST' || (req.url !== '/event' && !isHook)) { res.writeHead(404).end(); return; }
     if (!String(req.headers['content-type'] || '').startsWith('application/json')) { res.writeHead(415).end(); return; }
     let body = '';
+    const max = isHook ? 262144 : 8192; // Hook-Daten koennen laenger sein (z. B. die letzte Antwort)
     req.setEncoding('utf8');
-    req.on('data', (c) => { body += c; if (body.length > 8192) { res.writeHead(413).end(); req.destroy(); } });
+    req.on('data', (c) => { body += c; if (body.length > max) { res.writeHead(413).end(); req.destroy(); } });
     req.on('end', () => {
       if (res.writableEnded) return;
       let ev = null;
-      try { ev = validEvent(JSON.parse(body)); } catch { /* kaputtes JSON */ }
+      try {
+        let data;
+        // Hook-Daten: einzelne Backslashes (Windows-Pfade, falls eine Shell sie verschluckt hat) zur Not reparieren
+        try { data = JSON.parse(body); } catch (e) { if (!isHook) throw e; data = JSON.parse(body.replace(/\\(?!["\\/bfnrtu])/g, '\\\\')); }
+        if (isHook) {
+          const raw = eventFromHook(data);
+          if (!raw) { res.writeHead(200, { 'Content-Type': 'application/json' }).end('{"delivered":0}'); return; }
+          ev = validEvent(raw);
+        } else ev = validEvent(data);
+      } catch { /* kaputtes JSON */ }
       if (!ev) { res.writeHead(400).end(); return; }
       const n = onEvent(ev);
       res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify({ delivered: n || 0 }));

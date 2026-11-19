@@ -35,9 +35,63 @@ function applyPet(p) {
   nameEl.textContent = p.name;
   mood = p.muted ? 'sleep' : 'idle';
   if (!moodTimer) setMood(mood);
+  const on = (sp) => p.species === sp && p.talent && p.talent.enabled;
+  petEl.classList.toggle('shy', on('ghost'));   // Buh wird durchsichtig, wenn die Maus kommt
+  updateNight();
+  if (on('dragon')) watchBattery();              // Drache: Akku im Blick
+  if (p.species !== 'mushroom') showGarden(0);
 }
 
-const MOODS = ['idle', 'talk', 'happy', 'greet', 'sad', 'alert', 'sleep', 'walk', 'drag'];
+// ---------- Talente im Fenster ----------
+// Eule: nachts (22–6 Uhr) grosse Augen
+function updateNight() {
+  const h = new Date().getHours();
+  petEl.classList.toggle('night', !!(pet && pet.species === 'owl' && pet.talent && pet.talent.enabled && (h >= 22 || h < 6)));
+}
+setInterval(updateNight, 60000);
+// Drache: Akku melden (Chromium kennt den Laptop-Akku; ohne Akku passiert nichts)
+let batteryWatched = false;
+async function watchBattery() {
+  if (batteryWatched || !navigator.getBattery) return;
+  batteryWatched = true;
+  try {
+    const b = await navigator.getBattery();
+    const report = () => api.battery({ level: b.level, charging: b.charging });
+    b.addEventListener('levelchange', report);
+    b.addEventListener('chargingchange', report);
+    report();
+  } catch { /* kein Akku */ }
+}
+// Timer ueber dem Pet (Fokus des Roboters, Erinnerung des Hasen)
+const timerEl = document.getElementById('timer');
+let timerTick = null;
+function showTimer(t) {
+  clearInterval(timerTick);
+  if (!t) { timerEl.classList.remove('show'); return; }
+  const draw = () => {
+    const s = Math.max(0, Math.round((t.endsAt - Date.now()) / 1000));
+    timerEl.textContent = `${t.label} ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  };
+  draw();
+  timerEl.classList.add('show');
+  timerTick = setInterval(draw, 1000);
+}
+// Pilz: kleiner Garten neben dem Pet (waechst mit jeder Pause, jeden Tag neu)
+const gardenEl = document.getElementById('garden');
+const PLANTS = ['🌱', '🍄', '🌿', '🌼', '🍀', '🌱', '🍄', '🌸'];
+function showGarden(n) {
+  gardenEl.replaceChildren();
+  for (let i = 0; i < n; i++) {
+    const s = document.createElement('i');
+    s.textContent = PLANTS[i % PLANTS.length];
+    const side = i % 2 ? 1 : -1;               // abwechselnd links und rechts
+    s.style.setProperty('--x', `${side * (58 + Math.floor(i / 2) * 18)}px`);
+    s.style.animationDelay = `${i === n - 1 ? 0 : -1}s`;
+    gardenEl.appendChild(s);
+  }
+}
+
+const MOODS = ['idle', 'talk', 'happy', 'greet', 'sad', 'alert', 'sleep', 'walk', 'drag', 'stretch', 'cover', 'inhale', 'exhale'];
 function setMood(m) {
   petEl.classList.remove(...MOODS);
   petEl.classList.add(dragging ? 'drag' : walking ? 'walk' : m);
@@ -196,6 +250,8 @@ api.on('pet:update', applyPet);
 // Hauptprozess hat die Klick-Sperre geloest (Maus war nicht mehr ueber dem Fenster)
 api.on('pet:hover-reset', () => { over = false; });
 api.on('pet:say', showBubble);
+api.on('pet:timer', showTimer);
+api.on('pet:garden', (n) => showGarden(Math.max(0, Math.min(8, +n || 0))));
 // Stimmung kurz zeigen: 'happy' oder { mood: 'sleep', ms: 3500 } (Aktionen in Szenen)
 api.on('pet:mood', (m) => (typeof m === 'object' ? flash(m.mood, m.ms || 1600) : flash(m, 1600)));
 api.on('pet:walk', (dir) => {

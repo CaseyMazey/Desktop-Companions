@@ -108,6 +108,35 @@ body:has(#bubble.show) #name { opacity: 0 !important; }
 .cap { transform-box: fill-box; transform-origin: 50% 100%; }
 .cuddle .cap { animation: nuzzle 1.1s ease-in-out infinite reverse; }     /* Pilz: der Hut wiegt sich mit */
 
+/* ---------- Talente ---------- */
+/* Stimmungen fuer Talente: strecken (Katze), Augen zuhalten (Panda), ein-/ausatmen (Pinguin) */
+.stretch .eyes, .cover .eyes, .inhale .eyes, .exhale .eyes { display: none; }
+.stretch .eyes-closed, .cover .eyes-closed, .inhale .eyes-closed, .exhale .eyes-closed { display: inline; }
+.stretch #sprite { animation: stretch 2s ease-in-out 2; }
+.stretch .limb-l, .stretch .wing-l { transform: rotate(55deg); transition: transform .5s; }
+.stretch .limb-r, .stretch .wing-r { transform: rotate(-55deg); transition: transform .5s; }
+@keyframes stretch { 0%,100% { transform: scale(1,1); } 40%,60% { transform: scale(.92,1.14); } }
+.cover #sprite { animation: breathe 4s ease-in-out infinite; }
+.cover .limb-l { transform: rotate(62deg); transition: transform .4s; } .cover .limb-r { transform: rotate(-62deg); transition: transform .4s; }
+.inhale #sprite { animation: none; transform: scale(1.1, 1.13); transition: transform 3.8s ease-in-out; }
+.exhale #sprite { animation: none; transform: scale(.97, .94); transition: transform 5.8s ease-in-out; }
+/* Buh (Diskret): durchsichtig, wenn die Maus in der Naehe ist */
+#pet.shy #sprite { transition: opacity .25s; }
+#pet.shy.watch:not(.drag) #sprite { opacity: .28; }
+/* Eule nachts: grosse Augen */
+.night .sp-owl .disc { r: 18.5px; }
+.night .sp-owl .eye ellipse { rx: 7.8px; ry: 10.5px; }
+/* Timer ueber dem Pet (Roboter-Fokus, Hasen-Erinnerung) */
+#timer { position: absolute; left: 50%; top: -6px; transform: translate(-50%, -100%); padding: 2px 9px; border-radius: 999px; background: rgba(30, 27, 46, .9);
+  color: #fff; font: 600 12px/1.5 "Segoe UI", system-ui, sans-serif; font-variant-numeric: tabular-nums; white-space: nowrap; display: none; pointer-events: none; }
+#timer.show { display: block; }
+body:has(#bubble.show) #timer, #pet:hover #timer { opacity: 0; }   /* Blase und Name haben Vorrang */
+/* Pilzi: Pausen-Garten */
+#garden { position: absolute; left: 50%; bottom: 2px; width: 0; height: 0; pointer-events: none; }
+#garden i { position: absolute; bottom: 0; left: var(--x, 0); transform: translateX(-50%); font-style: normal; font-size: 17px; transform-origin: 50% 100%;
+  animation: sprout .9s cubic-bezier(.3, 1.6, .5, 1) both; }
+@keyframes sprout { from { transform: translateX(-50%) scale(0); } to { transform: translateX(-50%) scale(1); } }
+
 /* ---------- Maus ---------- */
 /* Augen folgen der Maus (--lx/--ly setzt pet.js); bei Beau wandern nur Pupille und Glanzpunkt */
 #pet.watch .eyes { transform: translate(var(--lx, 0), var(--ly, 0)); transition: transform .12s; }
