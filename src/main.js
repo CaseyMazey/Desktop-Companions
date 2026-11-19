@@ -105,7 +105,7 @@ function createPetWindow(pet) {
   win.loadFile(path.join(__dirname, 'pet', 'pet.html'), { query: { id: pet.id } });
   win.webContents.on('did-finish-load', () => { const p = petById(pet.id); if (p) win.webContents.send('pet:update', publicPet(p)); });
   // bei Skalierung (125 %, 150 %) legt Windows das Fenster schon ein paar Pixel zu gross an: einmal richtig setzen
-  win.once('ready-to-show', () => { placeWin(pet.id, pet.x, pet.y); if (!allHidden() && !pet.hidden) win.showInactive(); });
+  win.once('ready-to-show', () => { placeWin(pet.id, pet.x, pet.y); if (!allHidden() && !pet.hidden && !hiddenByFullscreen(pet.id)) win.showInactive(); });
   win.webContents.on('will-navigate', (e) => e.preventDefault());
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   const entry = { win, mem: {}, busyUntil: 0, dragging: null, walking: null, inTalk: false, petting: false, pettedAt: 0, pos: { x: pet.x, y: pet.y }, capturing: false };
@@ -591,7 +591,7 @@ function companionAction(pet, r) {
       const ne = live.get(n.id);
       e.inTalk = true; ne.inTalk = true;
       setTimeout(() => { if (!ne.win.isDestroyed()) ne.win.hide(); say(pet.id, 'Simsalabim! ✨', { mood: 'greet', ms: 2500 }); }, 1600);
-      setTimeout(() => { if (!ne.win.isDestroyed() && !allHidden() && !n.hidden) ne.win.showInactive(); say(n.id, 'W-was ist passiert?! Wo war ich?! 😵', { mood: 'alert', ms: 3500 }); }, 4600);
+      setTimeout(() => { if (!ne.win.isDestroyed() && !allHidden() && !n.hidden && !hiddenByFullscreen(n.id)) ne.win.showInactive(); say(n.id, 'W-was ist passiert?! Wo war ich?! 😵', { mood: 'alert', ms: 3500 }); }, 4600);
       setTimeout(() => { say(pet.id, 'Tadaa! 🎩✨ Danke, danke.', { mood: 'happy', ms: 3500 }); e.inTalk = false; ne.inTalk = false; }, 6800);
       return;
     }
@@ -840,26 +840,51 @@ function talentMenu(pet) {
 
 // ----- Buh: Diskret (Meeting/Vollbild -> alle Pets verstecken) -----
 let stopWatch = null;
-let watchState = { mic: false, cam: false, full: false };
+let watchState = { mic: false, cam: false, full: null };
+let fullDisplayId = null;   // Monitor mit echtem Vollbild: nur die Pets dort verstecken (nicht alle)
+let backLineAt = 0;
+// Auf welchem Monitor steht ein Pet? (Mitte unten im Fenster, wo das Pet sitzt)
+function displayIdOf(id) {
+  const e = live.get(id); const p = petById(id);
+  if (!e || !p) return null;
+  return screen.getDisplayNearestPoint({ x: Math.round(e.pos.x + W / 2), y: Math.round(e.pos.y + winHeight(p) - 30) }).id;
+}
+const hiddenByFullscreen = (id) => fullDisplayId != null && displayIdOf(id) === fullDisplayId;
 function applyVisibility() {
-  for (const [id, e] of live) (allHidden() || petById(id)?.hidden) ? e.win.hide() : e.win.showInactive();
+  for (const [id, e] of live) (allHidden() || petById(id)?.hidden || hiddenByFullscreen(id)) ? e.win.hide() : e.win.showInactive();
   updateTray();
 }
 function onWatch(s) {
   watchState = s;
   const ghosts = state.pets.filter((p) => talentOn(p, 'ghost'));
-  const want = ghosts.some((g) => (g.talent.hideMeeting && (s.mic || s.cam)) || (g.talent.hideFullscreen && s.full));
-  if (want === autoHidden) return;
-  autoHidden = want;
+  // Meeting (Mikrofon/Kamera): ALLE Pets verstecken (Entscheidung 2026-11-19)
+  const meeting = ghosts.some((g) => g.talent.hideMeeting && (s.mic || s.cam));
+  // Vollbild: nur den Monitor, auf dem es laeuft (das Rechteck kommt in Bildschirm-Pixeln, Electron rechnet in DIP)
+  let fullId = null;
+  if (s.full && ghosts.some((g) => g.talent.hideFullscreen)) {
+    const c = { x: Math.round(s.full.x + s.full.w / 2), y: Math.round(s.full.y + s.full.h / 2) };
+    const dip = typeof screen.screenToDipPoint === 'function' ? screen.screenToDipPoint(c) : c;
+    fullId = screen.getDisplayNearestPoint(dip).id;
+  }
+  if (meeting === autoHidden && fullId === fullDisplayId) return;
+  const meetingEnded = autoHidden && !meeting;
+  if (fullId !== fullDisplayId) log('[diskret]', fullId != null ? `Vollbild auf Monitor ${fullId} (${s.full.cls || '?'}) – Pets dort versteckt` : 'Vollbild vorbei');
+  if (meeting !== autoHidden) log('[diskret]', meeting ? 'Meeting (Mikrofon/Kamera) – alle Pets versteckt' : 'Meeting vorbei');
+  autoHidden = meeting;
+  fullDisplayId = fullId;
   for (const id of live.keys()) stopWalk(id);
   applyVisibility();
-  if (!want && !hidden && ghosts[0]) setTimeout(() => say(ghosts[0].id, 'Psst … ist es vorbei? Wir sind wieder da. 👻', { mood: 'talk', ms: 4000 }), 600);
+  // Buh meldet sich nur nach einem Meeting zurueck – und hoechstens alle 15 Minuten
+  if (meetingEnded && !hidden && ghosts[0] && Date.now() - backLineAt > 15 * 60000) {
+    backLineAt = Date.now();
+    setTimeout(() => say(ghosts[0].id, 'Psst … ist das Meeting vorbei? Wir sind wieder da. 👻', { mood: 'talk', ms: 4000 }), 600);
+  }
 }
 // Waechter nur laufen lassen, solange ein Buh mit Talent da ist
 function updateWatch() {
   const need = state.pets.some((p) => talentOn(p, 'ghost') && (p.talent.hideMeeting || p.talent.hideFullscreen));
   if (need && !stopWatch && !SMOKE) stopWatch = startWatch(onWatch, log);
-  if (!need && stopWatch) { stopWatch(); stopWatch = null; if (autoHidden) { autoHidden = false; applyVisibility(); } }
+  if (!need && stopWatch) { stopWatch(); stopWatch = null; if (autoHidden || fullDisplayId != null) { autoHidden = false; fullDisplayId = null; applyVisibility(); } }
 }
 const COMPANION_ACTIONS = new Set(['territory', 'gift', 'yawn', 'gossip', 'paper', 'trick', 'sneak', 'slide', 'sprint', 'roll', 'pompom', 'sysreport']);
 // Quak hat mit der Zunge eine "Fliege" (den Mauszeiger) erwischt
@@ -1064,7 +1089,7 @@ function setPetHidden(id, on) {
   if (e) {
     stopWalk(id);
     if (pet.hidden) { e.win.hide(); e.capturing = false; }
-    else if (!allHidden()) { e.win.showInactive(); setTimeout(() => say(id, 'Da bin ich wieder! 👋', { mood: 'happy', ms: 3500 }), 300); }
+    else if (!allHidden() && !hiddenByFullscreen(id)) { e.win.showInactive(); setTimeout(() => say(id, 'Da bin ich wieder! 👋', { mood: 'happy', ms: 3500 }), 300); }
   }
   save();
   updateTray();

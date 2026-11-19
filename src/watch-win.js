@@ -16,14 +16,20 @@ public class DcFg {
   [DllImport("user32.dll")] static extern IntPtr MonitorFromWindow(IntPtr h, int f);
   [DllImport("user32.dll")] static extern bool GetMonitorInfo(IntPtr m, ref MI i);
   [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int GetClassName(IntPtr h, StringBuilder s, int n);
-  public static bool Full() {
-    IntPtr h = GetForegroundWindow(); if (h == IntPtr.Zero) return false;
+  [DllImport("user32.dll")] static extern bool IsZoomed(IntPtr h);
+  // Echtes Vollbild (Video, Praesentation, Spiel, F11) – NICHT ein maximiertes Fenster: Auf Monitoren ohne Taskleiste
+  // fuellt auch ein maximiertes Fenster den ganzen Bildschirm. Gibt das Monitor-Rechteck zurueck ("x,y,r,b") oder "".
+  public static string Full() { return FullOf(GetForegroundWindow()); }
+  public static string FullOf(IntPtr h) {
+    if (h == IntPtr.Zero) return "";
     StringBuilder sb = new StringBuilder(64); GetClassName(h, sb, 64); string c = sb.ToString();
-    if (c == "Progman" || c == "WorkerW" || c == "Shell_TrayWnd") return false;
-    RECT r; if (!GetWindowRect(h, out r)) return false;
+    if (c == "Progman" || c == "WorkerW" || c == "Shell_TrayWnd" || c == "Shell_SecondaryTrayWnd") return "";
+    if (IsZoomed(h)) return "";                                 // maximiert = kein Vollbild (auch ohne Taskleiste)
+    RECT r; if (!GetWindowRect(h, out r)) return "";
     MI mi = new MI(); mi.cb = Marshal.SizeOf(typeof(MI));
-    if (!GetMonitorInfo(MonitorFromWindow(h, 2), ref mi)) return false;
-    return r.L <= mi.M.L && r.T <= mi.M.T && r.R >= mi.M.R && r.B >= mi.M.B;
+    if (!GetMonitorInfo(MonitorFromWindow(h, 2), ref mi)) return "";
+    if (r.L <= mi.M.L && r.T <= mi.M.T && r.R >= mi.M.R && r.B >= mi.M.B) return mi.M.L + "," + mi.M.T + "," + mi.M.R + "," + mi.M.B + "," + c;
+    return "";
   }
 }
 "@
@@ -36,14 +42,22 @@ function InUse($cap) {
   return $false
 }
 while ($true) {
-  $o = @{ mic = [bool](InUse 'microphone'); cam = [bool](InUse 'webcam'); full = [bool][DcFg]::Full() }
+  $o = @{ mic = [bool](InUse 'microphone'); cam = [bool](InUse 'webcam'); full = [string][DcFg]::Full() }
   [Console]::Out.WriteLine(($o | ConvertTo-Json -Compress))
   [Console]::Out.Flush()
   Start-Sleep -Seconds 3
 }
 `;
 
-// Startet den Waechter; onState({ mic, cam, full }) bei jeder Aenderung. Gibt eine Stopp-Funktion zurueck.
+// "x,y,r,b" (Bildschirm-Pixel) -> { x, y, w, h } oder null (kein Vollbild)
+function parseRect(v) {
+  const parts = String(v || '').split(',');
+  const n = parts.slice(0, 4).map(Number);
+  if (!(n.length === 4 && n.every(Number.isFinite) && n[2] > n[0] && n[3] > n[1])) return null;
+  return { x: n[0], y: n[1], w: n[2] - n[0], h: n[3] - n[1], cls: parts.slice(4).join(',').slice(0, 80) };
+}
+
+// Startet den Waechter; onState({ mic, cam, full }) bei jeder Aenderung (full = Monitor mit Vollbild oder null). Gibt eine Stopp-Funktion zurueck.
 function startWatch(onState, log = () => {}) {
   if (process.platform !== 'win32') return () => {};
   let child = null;
@@ -63,7 +77,7 @@ function startWatch(onState, log = () => {}) {
         buf = buf.slice(i + 1);
         if (!line.startsWith('{') || line === last) continue;
         last = line;
-        try { const s = JSON.parse(line); onState({ mic: !!s.mic, cam: !!s.cam, full: !!s.full }); } catch { /* halbe Zeile */ }
+        try { const s = JSON.parse(line); onState({ mic: !!s.mic, cam: !!s.cam, full: parseRect(s.full) }); } catch { /* halbe Zeile */ }
       }
     });
     child.on('error', (e) => log('[diskret]', e.message));
@@ -76,4 +90,4 @@ function startWatch(onState, log = () => {}) {
   return () => { stopped = true; if (child) child.kill(); };
 }
 
-module.exports = { startWatch };
+module.exports = { startWatch, parseRect, SCRIPT };
