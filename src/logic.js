@@ -32,7 +32,9 @@ function normalizeReminders(r, kind) {
 // Ein neues Pet mit den Voreinstellungen seiner App
 function createPet(kind = 'none', extra = {}) {
   if (!KINDS.includes(kind)) kind = 'none';
-  return normalizePet({ id: newId(), kind, name: NAMES[kind], species: DEFAULT_SPECIES[kind], target: APPS[kind].target(), ...extra });
+  // Name kommt vom Tier (Buh, Mauz …), nicht von der App – ein Pet heisst nicht "Nexi", nur weil es mit NEXUS verbunden ist
+  const species = SPECIES[extra.species] ? extra.species : DEFAULT_SPECIES[kind];
+  return normalizePet({ id: newId(), kind, name: speciesName(species), species, target: APPS[kind].target(), ...extra });
 }
 
 // Neues Pet aus der Auswahl "erst das Tier, dann die Verbindung": Name vom Tier, Rest vom Preset
@@ -52,11 +54,18 @@ function normalizePet(p) {
   p = p && typeof p === 'object' ? p : {};
   const kind = KINDS.includes(p.kind) ? p.kind : 'none';
   const species = SPECIES[p.species] ? p.species : DEFAULT_SPECIES[kind];
+  const prof = p.profile && typeof p.profile === 'object' ? p.profile : {};
   return {
     id: /^[a-z0-9]{4,16}$/.test(p.id) ? p.id : newId(),
     kind,
-    name: str(p.name, 24).trim() || NAMES[kind],
+    name: str(p.name, 24).trim() || speciesName(species) || NAMES[kind],
     species,
+    // Steckbrief: leer = Standard des Tiers (Charakter, Mag, Mag nicht); pro Pet aenderbar und exportierbar
+    profile: { character: str(prof.character, 200).trim(), likes: str(prof.likes, 200).trim(), dislikes: str(prof.dislikes, 200).trim() },
+    // eigene Sprueche des Charakters (leer = die Sprueche des Tiers)
+    lines: (Array.isArray(p.lines) ? p.lines : []).map((l) => str(l, 200).trim()).filter(Boolean).slice(0, 60),
+    created: /^\d{4}-\d{2}-\d{2}$/.test(p.created) ? p.created : new Date().toISOString().slice(0, 10), // "Dabei seit"
+    appName: str(p.appName, 80).trim(), // Name einer installierten App (z. B. "Rechner"), wenn so verbunden
     color: HEX.test(p.color) ? p.color : SPECIES[species].color,
     target: str(p.target, 1000).trim(),
     size: num(p.size, 70, 160, 100),
@@ -134,6 +143,33 @@ function dueShared(timed, mem, now = new Date()) {
     mem.shared[key] = true;
     return true;
   });
+}
+
+// ---------- Pets exportieren / importieren (.dcpet) ----------
+// Nur das, was ein Pet ausmacht – keine Position, keine ID, kein "ausgeblendet"
+const PET_FORMAT = 'desktop-companions-pet';
+function petToExport(p) {
+  const { name, species, color, size, profile, lines, talent, kind, target, appName, events, reminders, wander } = p;
+  return { name, species, color, size, profile, lines, talent, kind, target, appName, events, reminders, wander };
+}
+function exportFile(pets) {
+  return { format: PET_FORMAT, version: 1, exported: new Date().toISOString().slice(0, 10), pets: pets.map(petToExport) };
+}
+// Datei lesen -> Liste gepruefter Pets (neue IDs); wirft bei fremden/kaputten Dateien
+function importFile(data) {
+  const list = data && data.format === PET_FORMAT && Array.isArray(data.pets) ? data.pets : null;
+  if (!list || !list.length) throw new Error('Das ist keine Pet-Datei von Desktop Companions.');
+  return list.slice(0, 20).map((raw) => {
+    const p = normalizePet({ ...raw, id: undefined, x: null, y: null, homeX: null, hidden: false, muted: false, created: undefined });
+    return p;
+  });
+}
+
+// Nach dem Entsperren: Ist der Mensch wirklich zurueck? (waited = ms seit dem Entsperren, idleMs = ms seit der
+// letzten Eingabe). Ja, wenn es NACH der Mindestwartezeit eine Eingabe gab – oder spaetestens nach maxWait.
+function userIsBack(waited, idleMs, minWait = 5000, maxWait = 30000) {
+  if (waited >= maxWait) return true;
+  return waited >= minWait && idleMs < waited - minWait + 1000;
 }
 
 // Neues Pet: seine voreingestellten Uhrzeiten (z. B. DAN 15:45) wandern in die gemeinsamen Uhrzeiten
@@ -266,4 +302,4 @@ function chatterDelay(level, rand = Math.random) {
   return (r[0] + rand() * (r[1] - r[0])) * 60000;
 }
 
-module.exports = { normalizeShared, dueShared, takePresetTimed, createPet, createChosenPet, petsForEvent, normalizePet, normalizeState, dueReminder, inActiveWindow, pickMessage, neighborPairs, neighborGroups, strollTarget, HOME_RADIUS, chatterDelay, overlaps, freeSpot, KINDS };
+module.exports = { exportFile, importFile, petToExport, userIsBack, normalizeShared, dueShared, takePresetTimed, createPet, createChosenPet, petsForEvent, normalizePet, normalizeState, dueReminder, inActiveWindow, pickMessage, neighborPairs, neighborGroups, strollTarget, HOME_RADIUS, chatterDelay, overlaps, freeSpot, KINDS };

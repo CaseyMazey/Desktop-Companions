@@ -116,7 +116,7 @@ function showProp(p) {
 // kurze Effekte als Klasse (roll = Purzelbaum, sneak = Schleichen, split = Blubb teilt sich)
 const fxTimers = {};
 function fx({ name, ms = 1500 } = {}) {
-  if (!['roll', 'sneak', 'split'].includes(name)) return;
+  if (!['roll', 'sneak', 'split', 'eat'].includes(name)) return;
   clearTimeout(fxTimers[name]);
   petEl.classList.add(name);
   fxTimers[name] = setTimeout(() => petEl.classList.remove(name), Math.min(ms, 20000));

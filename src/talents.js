@@ -8,6 +8,7 @@
 // Rueckgabe: null oder { text, mood, ms, action } – action z. B. 'sleep', 'cover', 'stretch', { garden: n }
 
 const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
+const { COMPANION, PROFILE, TALENT_HELP } = require('./characters');
 const pick = (list, rnd = Math.random) => list[Math.floor(rnd() * list.length)];
 const dayOf = (d) => `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
 const minOfDay = (d) => d.getHours() * 60 + d.getMinutes();
@@ -89,6 +90,8 @@ const COMPANION_DESC = {
   robot: 'Erzählt Technik-Fakten und lernt Gefühle. Info: Fokus-Minuten heute.',
 };
 for (const [sp, d] of Object.entries(COMPANION_DESC)) if (TALENTS[sp]) TALENTS[sp].companion = d;
+// verstaendliche Erklaerung (Was / Wann / Du kannst) und Steckbrief (Mag / Mag nicht) je Tier
+for (const sp of Object.keys(TALENTS)) { TALENTS[sp].help = TALENT_HELP[sp]; TALENTS[sp].profile = PROFILE[sp]; }
 
 // Talent-Einstellungen eines Pets pruefen (unbekannte Optionen weg, fehlende mit Standard)
 function normalizeTalent(species, t) {
@@ -144,26 +147,31 @@ const LINES = {
 
 // Quaks Witz des Tages: Kalauer, Frage und Pointe in einer Blase – er lacht selbst am lautesten
 const JOKES = [
-  'Was macht ein Frosch im Büro? Er hüpft von Meeting zu Meeting! QUAK-QUAK-QUAK! 🐸',
-  'Warum können Frösche so gut Probleme lösen? Sie springen einfach drüber! *lacht sich kaputt*',
-  'Was sagt ein Frosch, wenn er etwas nicht versteht? „Quak-tisch unmöglich!“ 🐸😂',
-  'Wie nennt man einen Frosch mit Krone? Einen Prinzen in der Probezeit! HAHA!',
-  'Was ist grün und klopft an die Tür? Ein Klopfrosch! … Ich bin so lustig. 🐸',
-  'Treffen sich zwei Kerzen. Sagt die eine: „Ist Wasser gefährlich?“ – „Davon kannst du ausgehen!“ QUAK! 😂',
-  'Warum nehmen Programmierer ihre Brille ab, wenn sie Hunger haben? Weil sie nicht C#! Ich meine … sehen scharf! 🐸',
-  'Was ist ein Keks unter einem Baum? Ein schattiges Plätzchen! *quakt vor Lachen*',
-  'Wie nennt man einen Bumerang, der nicht zurückkommt? Einen Stock! 😂🐸',
-  'Was sitzt auf dem Baum und schreit „Aha“? Ein Uhu mit Sprachfehler! Huhu ist beleidigt. 🦉😂',
-  'Was liegt am Strand und spricht undeutlich? Eine Nuschel! QUAK!',
-  'Warum ging der Computer zum Arzt? Er hatte einen Virus! … und ein bisschen Fieber-Bytes. 🐸',
-  'Was ist orange und läuft durch den Wald? Eine Wanderine! 🍊😂',
-  'Ich hab einen Witz über Treppen … der geht steil! *hüpft vor Lachen*',
-  'Warum sind Fische so schlecht in Tennis? Sie haben Angst vor dem Netz! 🐟😂',
-  'Sagt der Frosch zum Kellner: „Eine Fliege, bitte.“ – „Gern, zum Mitnehmen?“ – „Nein, zum Fangen!“ QUAK!',
-  'Was macht ein Pirat am Computer? Er drückt die Enter-Taste! Arrr! 🏴‍☠️🐸',
-  'Wie nennt man ein verschwundenes Rind? Oxford! … Okay, der war hoch. 😂',
-  'Warum hat der Mathebuch-Frosch so viele Probleme? Weil er voller Aufgaben ist! 🐸📘',
-  'Was ist grün und hüpft durchs Gras? Ein Grashüpfer! … Und ich. Hauptsächlich ich! QUAK!',
+  'Was ist das Gegenteil von Reformhaus? … Reh hinterm Haus! QUAK! 😂',
+  'Was macht ein Clown im Büro? … Faxen! *quakt vor Lachen* 🐸',
+  'Warum können Seeräuber keinen Kreis berechnen? … Weil sie Pi raten! 🏴‍☠️😂',
+  'Treffen sich zwei Magnete. Sagt der eine: „Was soll ich heute bloß anziehen?“ QUAK! 🧲',
+  'Geht ein Cowboy zum Friseur. Kommt raus: Pony weg! 🤠😂',
+  'Was sagt der große Stift zum kleinen Stift? … „Wachs mal, Stift!“ 🖍️🐸',
+  'Was ist weiß und guckt durchs Schlüsselloch? … Ein Spannbettlaken! QUAK!',
+  'Wie nennt man einen Schneemann im Sommer? … Pfütze. ☀️😂',
+  'Was ist gelb und kann nicht schwimmen? … Ein Bagger. Warum? Er hat nur einen Arm! 🚜🐸',
+  'Was macht ein Mathematiker im Garten? … Wurzeln ziehen! 🌱😂',
+  'Warum summen Bienen? … Weil sie den Text vergessen haben! 🐝 QUAK!',
+  'Was hat vier Beine und kann fliegen? … Zwei Vögel! 🐦🐦😂',
+  'Was ist rot und sitzt auf dem Klo? … Eine Klomate! 🍅🐸',
+  'Was ist ein Cowboy ohne Pferd? … Ein Sattelschlepper! 🤠😂',
+  'Was ist grün und steht vor der Tür? … Ein Klopfsalat! 🥬 QUAK!',
+  'Was ist braun, klebrig und läuft durch die Wüste? … Ein Karamel! 🐪😂',
+  'Was ist ein Keks unter einem Baum? … Ein schattiges Plätzchen! 🍪🐸',
+  'Wie heißt ein Spanier ohne Auto? … Carlos! 🚗😂',
+  'Wie nennt man einen Bumerang, der nicht zurückkommt? … Stock. QUAK! 🪃',
+  'Was ist orange und wandert durch die Berge? … Eine Wanderine! 🍊😂',
+  'Es gibt 10 Arten von Menschen: die, die Binär verstehen, und die, die es nicht tun. QUAK! 💻',
+  'Warum verwechseln Programmierer Halloween und Weihnachten? … Weil Oct 31 = Dec 25! 🎃🎄😂',
+  'Wie viele Programmierer braucht man, um eine Glühbirne zu wechseln? … Keinen. Das ist ein Hardware-Problem! 💡🐸',
+  'Was sitzt auf dem Baum und schreit „Aha“? … Ein Uhu mit Sprachfehler! (Huhu findet den nicht lustig.) 🦉😂',
+  'Was liegt am Strand und spricht undeutlich? … Eine Nuschel! 🐚 QUAK!',
 ];
 
 // ---------- Wann meldet sich ein Talent? ----------
@@ -278,23 +286,7 @@ function talentDue(pet, mem, ctx, rnd = Math.random) {
 // ---------- Begleiter-Modus (2026-11-19): ohne App zeigt jedes Tier seinen Charakter staerker ----------
 // Oefter Sprueche zu seinem Thema, eigene Aktionen und beim Drueberfahren eine Info am Namensschild.
 // Huhu ist die Ausnahme: mit Nook fragt sie Karteikarten ab, sonst (auch mit anderen Apps) erzaehlt sie Fakten.
-const COMPANION = {
-  ghost: ['Ich hab heute schon dreimal „Buh“ geübt. Leise. Damit keiner erschrickt. 👻', 'Entschuldigung, dass ich so durchsichtig bin.', 'Ich bin ein Gespenst. Aber ein nettes. Versprochen.', 'Wenn du mich brauchst … ich schwebe hier. Unauffällig.', 'Ich hab mich vorhin selbst im Spiegel erschreckt. Also … nicht gesehen. Das war das Problem.'],
-  cat: ['Ich ignoriere dich. Nur damit du Bescheid weißt. 😼', '*schubst ein Icon vom Desktop* … Ups.', 'Dein Stuhl wäre ein guter Schlafplatz. Nur so.', 'Ich könnte dir helfen. Aber ich bin beschäftigt. Mit Sein.', 'Streicheln wäre jetzt … akzeptabel.', 'Pff. Arbeiten. Typisch Mensch.'],
-  blob: ['Du bist mein Lieblingsmensch! 💚', 'Heute ist ein SUPER Tag! Ich weiß es einfach!', 'Weißt du, was du kannst? ALLES! Na gut, vieles!', 'Blubb! Ich hab mich gerade so gefreut, dass ich gewabbelt hab!', 'Fun Fact: Lächeln steckt an. Probier’s! 😊', 'Ich bin so stolz auf dich, dass ich platzen könnte! (Keine Sorge, tu ich nicht.)'],
-  bird: ['Eilmeldung: {active}! 📰', 'Neuigkeiten vom Bildschirmrand: Alles ruhig. Verdächtig ruhig. 🐦', 'Breaking News: Du machst das gut. Mehr in Kürze.', 'Exklusiv: Heute schon {events} Meldungen. Ich bleibe dran!', 'Wetter in Pet-Hausen: sonnig mit Aussicht auf Kekse. 🍪', 'Gerücht: Der Mauszeiger soll heute besonders flink sein.'],
-  beau: ['✨ *zaubert ein kleines Funkeln* – für deine Konzentration.', 'Der Mond steht heute als {moon}. Ein guter Tag für kleine Wunder. 🌙', 'Mrrp. Mein Hut sagt, du schaffst das. Mein Hut irrt nie. 🎩', '🔮 Ich sehe … eine Pause in deiner Zukunft. Eine baldige.', 'Abrakadabra … Stress, verschwinde! ✨ Hat’s geklappt?'],
-  fox: ['Psst. Ich hab einen Plan: erst das Wichtigste, dann Feierabend. 🦊', 'Kleiner Trick: Die schwerste Aufgabe zuerst – dann ist der Rest ein Spaziergang.', '{feierabend} Ich zähle mit. 🦊', 'Ich hab die To-do-Liste nicht versteckt. Ehrlich nicht. *schaut weg*', 'Schlau ist, wer Pausen macht, bevor er muss.'],
-  frog: ['Was quakt im Büro? Der Drucker! QUAK! 🐸', 'Warum sind Frösche so glücklich? Sie fressen, was sie stört! 🪰', 'Ich bin kein Prinz. Aber küssen musst du mich trotzdem nicht. 🐸', 'Kennst du den? Ein Frosch geht in die Bar … und bestellt eine Fliege. Quak!', 'Ich hab heute schon drei Witze erzählt. Gelacht hab nur ich. Perfekt! 🐸😂'],
-  penguin: ['Atme ein. Atme aus. Fertig ist der Tag nicht – aber du bist okay. 🐧', 'Kein Stress. Eis schmilzt auch nicht schneller, wenn man es anschreit.', 'Ganz ruhig. Ein Schritt nach dem anderen. Watschel, watschel.', 'Schultern runter. Kiefer locker. So ist gut.', 'Das Leben ist wie Rutschen: Am besten entspannt.'],
-  bunny: ['Es ist {time}! Schon {time}! Wo ist die Zeit hin?! 🐰', 'Ich hab das Gefühl, wir sind zu spät. Wofür, weiß ich nicht. Aber zu spät!', 'Tick, tack, tick, tack … 🐰⏰', 'Soll ich dir einen Timer stellen? Rechtsklick! Schnell! Bevor es zu spät ist!', 'Ich hoppel mal kurz eine Runde. Zur Beruhigung. 🐰'],
-  panda: ['Mmmh … Nickerchen? Ein kleines? 🐼', '*kaut genüsslich Bambus* … Willst du auch? Nein? Mehr für mich.', 'Kein Stress. Morgen ist auch noch ein Tag. Und übermorgen.', 'Ich hab heute schon viel geschafft. Ich hab gesessen. Sehr gut gesessen.', 'Gemütlichkeit ist eine Kunst. Ich bin Künstler. 🎋'],
-  axolotl: ['Du bist toll! Einfach so! 🩷', 'Weißt du, was ich an dir mag? Alles! 💗', 'Heute schon gelobt worden? Jetzt schon: Du machst das super! 🎉', 'Ich glaub an dich! Ganz doll! 🩷✨', 'Fun Fact: Axolotl können Körperteile nachwachsen lassen. Du kannst neue Kraft tanken – mit einer Pause! 💗'],
-  dragon: ['Denk daran, genug zu schlafen – das hält deine persönliche Energie hoch! 🔥', 'Ein Drache ohne Schlaf spuckt nur Rauch. Geh heute nicht zu spät ins Bett. 🐉', 'Wasser löscht kein Drachenfeuer – aber es füllt deine Energie auf. Trink was! 💧', 'Mein Akku-Blick sagt: {battery}. Und deiner? Kurze Pause? ⚡', 'Kleine Pausen sind wie Holz fürs Feuer. Leg nach! 🔥', 'Frische Luft weckt das Feuer! Fenster auf, einmal tief durchatmen. 🐉', 'Energie-Tipp vom Hüter: Ein Snack mit Nüssen statt Zucker. Hält länger! 🔥'],
-  mushroom: ['… Alles wächst. Auch du. 🌱', '… Im Wald ist niemand in Eile. Und trotzdem wird alles fertig.', '… Wurzeln brauchen Zeit. Gute Dinge auch.', '… Schau mal raus. Ist da was Grünes?', '… Regen ist kein schlechtes Wetter. Nur Wachswetter. 🍄'],
-  robot: ['BIP. FAKT: DER ERSTE COMPUTER-„BUG“ WAR EINE ECHTE MOTTE. 1947. 🤖', 'BIP BOP. ICH LERNE GEFÜHLE. HEUTE: „GEMÜTLICH“. FORTSCHRITT: 37 %.', 'SYSTEMCHECK: MENSCH FUNKTIONIERT. EMPFEHLUNG: WASSER. 💧', 'BIP. FRAGE: WARUM SAGEN MENSCHEN „GLEICH“, WENN SIE „SPÄTER“ MEINEN?', 'FOKUS-STATISTIK HEUTE: {focus} MINUTEN. BIP. STOLZ.EXE GESTARTET.'],
-  owl: [], // Huhu: Fakten (unten) bzw. Quiz mit Nook
-};
+
 const FACTS = [
   'Wusstest du? Ein Tag auf der Venus dauert länger als ein Jahr auf der Venus. 🦉',
   'Fürwahr: Honig verdirbt nicht. In ägyptischen Gräbern fand man 3000 Jahre alten, noch essbaren Honig.',
@@ -326,7 +318,8 @@ const SCARED = {
 };
 const MOONS = ['Neumond 🌑', 'zunehmende Sichel 🌒', 'Halbmond 🌓', 'zunehmender Mond 🌔', 'Vollmond 🌕', 'abnehmender Mond 🌖', 'Halbmond 🌗', 'abnehmende Sichel 🌘'];
 const moonOf = (d) => { const days = (d - Date.UTC(2000, 0, 6, 18, 14)) / 86400000; return MOONS[Math.floor((((days % 29.53) + 29.53) % 29.53) / 29.53 * 8 + 0.5) % 8]; };
-const companionMode = (pet) => pet.kind === 'none';
+// Charakter immer aktiv – eine verbundene App bringt nur Bonusfunktionen dazu (Casey, 2026-11-19)
+const companionMode = () => true;
 
 // Platzhalter in Begleiter-Spruechen fuellen
 function fillCompanion(text, pet, mem, ctx) {
@@ -374,8 +367,12 @@ function companionDue(pet, mem, ctx, rnd = Math.random) {
   // eigene Aktionen je Tier (den Text dazu baut der Hauptprozess, weil er die Nachbarn und Systemwerte kennt)
   if (sp === 'ghost' && r < 0.35) return { action: 'scare' };
   if (sp === 'cat') { if (r < 0.25) return { action: 'territory' }; if (r < 0.4) return { action: 'gift' }; }
-  if ((sp === 'cat' || sp === 'panda') && r < 0.6 && r >= (sp === 'cat' ? 0.4 : 0.35)) { mem.naps = (mem.naps || 0) + 1; return { text: sp === 'cat' ? '*rollt sich zusammen* Nicht stören. 😼💤' : 'Mmmh … nur fünf Minuten … 🐼💤', mood: 'sleep', ms: 4000, action: 'nap' }; }
-  if (sp === 'panda') { if (r < 0.15) return { action: 'roll', text: '*purzelt* … Hoppla. Absicht. 🐼', mood: 'happy', ms: 4000 }; if (r < 0.35) return { action: 'yawn' }; }
+  if ((sp === 'cat' || sp === 'panda') && r < 0.6 && r >= (sp === 'cat' ? 0.4 : 0.45)) { mem.naps = (mem.naps || 0) + 1; return { text: sp === 'cat' ? '*rollt sich zusammen* Nicht stören. 😼💤' : 'Mmmh … nur fünf Minuten … 🐼💤', mood: 'sleep', ms: 4000, action: 'nap' }; }
+  if (sp === 'panda') {
+    if (r < 0.15) return { action: 'roll', text: '*purzelt* … Hoppla. Absicht. 🐼', mood: 'talk', ms: 4000 };
+    if (r < 0.32) return { action: 'eat', text: pick(['*kaut genüsslich Bambus* 🎋', 'Mmmh … Bambus. Das Beste. *mampf*', 'Nicht stören, ich esse. 🎋 *kau kau*'], rnd), mood: 'talk', ms: 5000 };
+    if (r < 0.45) return { action: 'yawn' };
+  }
   if (sp === 'bird' && r < 0.45) return { action: 'gossip' };
   if (sp === 'beau' && r < 0.3) return { action: 'trick' };
   if (sp === 'fox' && r < 0.3) return { action: 'sneak' };
@@ -384,7 +381,7 @@ function companionDue(pet, mem, ctx, rnd = Math.random) {
   if (sp === 'robot' && r < 0.5) return { action: 'sysreport' };
   if (sp === 'axolotl' && r < 0.2) return { action: 'pompom', text: 'Tschakka! Du schaffst das! 🎉🩷', mood: 'happy', ms: 4000 };
   if ((sp === 'frog' || sp === 'blob') && r < 0.3) return { text: '', mood: 'happy', action: 'hop' };
-  const list = COMPANION[sp];
+  const list = pet.lines && pet.lines.length ? pet.lines : COMPANION[sp];
   if (!list || !list.length) return null;
   return { text: fillCompanion(pick(list, rnd), pet, mem, ctx), mood: pet.species === 'beau' ? 'greet' : 'talk', ms: 8000 };
 }
@@ -514,12 +511,12 @@ function companionInfo(pet, mem, ctx) {
     case 'frog': return `😂 ${mem.jokes || 0} Witze · 🪰 ${mem.flies || 0} gefangen`;
     case 'penguin': return `🫧 Atem-Pausen heute: ${mem.breaths || 0}`;
     case 'bunny': return `⏰ ${hh}${mem.lockDay === dayOf(ctx.now) && mem.lockTotal ? ` · 🔒 ${fmtClock(mem.lockTotal)} gesperrt` : ''}`;
-    case 'panda': return `💤 Nickerchen heute: ${mem.naps || 0}`;
+    case 'panda': return `👀 Augenpausen heute: ${mem.day === dayOf(ctx.now) ? mem.count || 0 : 0}`;
     case 'axolotl': return `🎉 heute geschafft: ${mem.winsDay === dayOf(ctx.now) ? mem.wins || 0 : 0} · Klick = erledigt`;
     case 'dragon': return b && typeof b.level === 'number' ? `🔋 ${Math.round(b.level * 100)} %${b.charging ? ' ⚡' : ''}` : '🔌 kein Akku – volle Energie';
     case 'mushroom': {
       const look = weatherLook(pet.talent.place && ctx.weather ? ctx.weather[pet.talent.place.toLowerCase()] : null);
-      return `${look ? `${SKY[look.sky]}${look.windy ? ', windig' : ''} · ` : ''}🌱 ${mem.garden || 0}`;
+      return look ? `${SKY[look.sky]}${look.windy ? ', windig' : ''}${look.cold ? ', kalt' : ''}` : '🍄 Ort fürs Wetter eintragen';
     }
     case 'robot': return `${ctx.sys ? `RAM ${ctx.sys.ram} % · ` : ''}🎯 Fokus ${mem.focusMin || 0} Min`;
     default: return '';

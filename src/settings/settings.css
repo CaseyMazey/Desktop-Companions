@@ -86,7 +86,7 @@ details.advanced[open] summary { margin-bottom: 10px; }
 .fur { fill: #2a2433; stroke: #5b4f6e; stroke-width: 2.5; stroke-linejoin: round; }
 .wave { display: none; }
 .dark { fill: var(--c-dark); }
-.screen-heart, .screen-text, .screen-mini, .slide-pose, .tongue, .minis, .snowcap, .scarf, .shades, .friend, .drops { display: none; }
+.screen-heart, .screen-text, .screen-mini, .slide-pose, .tongue, .minis, .snowcap, .scarf, .shades, .friend, .drops, .bamboo { display: none; }
 .disc { fill: #fff8ec; stroke: var(--c-dark); stroke-width: 2.5; }
 .cheek { fill: #fb7185; opacity: .45; }
 .eyes-closed, .eyes-happy, .mouth, .beak-open { display: none; }
@@ -170,3 +170,79 @@ dialog#create::backdrop { background: var(--backdrop); }
 .card.special { background: radial-gradient(ellipse at 50% 30%, rgba(246, 185, 29, .22), var(--card) 75%); border-color: rgba(246, 185, 29, .5); }
 .card.special[aria-checked="true"] { box-shadow: 0 0 0 1px #f6b91d inset; border-color: #f6b91d; }
 .special-badge { font-size: 11px; font-weight: 700; color: #5c3900; background: linear-gradient(90deg, #ffe39a, #f6b91d); padding: 2px 8px; border-radius: 8px; white-space: nowrap; }
+
+/* ===== Neues Layout (0.12): Kopfzeile, Steckbrief + Funktion nebeneinander, Kacheln ===== */
+aside { gap: 10px; }
+.brand { font-size: 18px; margin: 0 2px 2px; }
+.add-btn { width: 100%; padding: 8px 10px; font-weight: 600; }
+.side-version { margin-top: auto; font-size: 11.5px; padding: 0 4px; }
+.content { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.topbar { display: flex; align-items: center; gap: 8px; padding: 10px 28px; border-bottom: 1px solid var(--line); background: var(--panel); }
+.topbar-title { flex: 1; font-weight: 600; font-size: 15px; color: var(--muted); }
+.topbar .nav-btn { border: 1px solid var(--line); background: var(--btn); padding: 6px 12px; }
+.topbar .nav-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+main { padding: 18px 28px 28px; }
+#editor { max-width: 1500px; width: 100%; }
+.tile { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.tile h3 { margin: 0; font-size: 14px; }
+.pet-top { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; margin-bottom: 14px; }
+.pet-tiles { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; margin-bottom: 14px; }
+@media (min-width: 1100px) {
+  .pet-top { grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); }
+  .pet-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+/* Steckbrief */
+.steckbrief { background: linear-gradient(160deg, var(--soft), transparent 60%), var(--panel); }
+.sb-head { display: flex; align-items: center; gap: 14px; }
+.sb-art { width: 96px; height: 96px; flex: none; border-radius: 50%; padding: 8px; background: radial-gradient(circle at 50% 60%, var(--soft), transparent 70%); }
+.sb-art svg { width: 100%; height: 100%; overflow: visible; }
+.sb-main { flex: 1; min-width: 0; }
+.sb-name-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.sb-name-row .title { width: auto; flex: 1; min-width: 120px; }
+.sb-quote { margin: 4px 6px 0; padding: 4px 10px; border-left: 3px solid var(--accent); border-radius: 0 8px 8px 0; background: var(--card); font-style: italic; font-size: 13px; }
+.sb-table { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 6px 12px; margin: 0; font-size: 13.5px; align-items: center; }
+.sb-table dt { color: var(--muted); font-weight: 600; }
+.sb-table dd { margin: 0; min-width: 0; }
+.inline-edit { width: 100%; border-color: transparent; background: transparent; padding: 3px 6px; }
+.inline-edit:hover { border-color: var(--line); background: var(--field); }
+/* Funktion */
+.fn-current { display: flex; gap: 12px; align-items: flex-start; padding: 10px 12px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); }
+.fn-icon { font-size: 22px; width: 30px; text-align: center; flex: none; line-height: 1.3; }
+.fn-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.fn-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.fn-main .hint { margin: 0; }
+.caps { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+.cap { font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 999px; background: var(--btn); color: var(--muted); }
+.cap-reminds { background: rgba(246, 185, 29, .18); color: #b7791f; }
+.cap-reports { background: rgba(52, 211, 153, .18); color: var(--ok); }
+.status { font-size: 11.5px; font-weight: 600; }
+.status.ok { color: var(--ok); }
+.status.warn { color: #d97706; }
+#fn-search { width: 100%; }
+.fn-results { display: flex; flex-direction: column; gap: 2px; max-height: 300px; overflow: auto; padding-right: 2px; }
+.fn-results h4 { margin: 8px 2px 2px; font-size: 11.5px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); }
+.fn-results .hint { margin: 2px; }
+.fn-item { display: flex; gap: 10px; align-items: center; text-align: left; background: transparent; border-color: transparent; padding: 6px 8px; }
+.fn-item:hover { background: var(--hover); border-color: transparent; }
+.fn-item.active { background: var(--active); border-color: var(--accent); }
+.fn-item .fn-icon { font-size: 18px; width: 24px; }
+.fn-more summary { cursor: pointer; }
+.fn-more[open] { display: flex; flex-direction: column; gap: 8px; }
+/* Talent-Hilfe */
+.help { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; margin: 0; font-size: 13px; }
+.help dt { color: var(--muted); font-weight: 600; font-size: 12px; margin-top: 6px; }
+.help dd { margin: 0; line-height: 1.45; }
+#p-comp p { margin: 0; font-size: 13px; line-height: 1.45; }
+details.tile.advanced { display: block; margin-bottom: 14px; }
+.advanced-body hr { border: 0; border-top: 1px solid var(--line); width: 100%; margin: 4px 0; }
+button.small { font-size: 12.5px; padding: 4px 10px; align-self: flex-start; }
+.pet-foot { display: flex; justify-content: flex-end; align-items: center; gap: 10px; }
+.pet-foot #saved { margin-right: auto; }
+/* Neues Pet: Name gross, Tierart klein */
+.card-sub { font-size: 11.5px; color: var(--muted); margin-top: -2px; }
+.create-head .small { margin-left: auto; }
+.card.preset .status { flex-basis: 100%; }
+/* Einstellungen */
+.settings-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+.settings-grid fieldset { margin: 0; }
+@media (min-width: 1100px) { .settings-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .settings-grid .wide { grid-column: 1 / -1; } }

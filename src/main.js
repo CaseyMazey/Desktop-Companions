@@ -6,7 +6,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const http = require('node:http');
 const { APPS, SPECIES, BEAU, GROUPS } = require('./presets');
-const { dueShared, takePresetTimed, createPet, createChosenPet, petsForEvent, normalizePet, normalizeState, dueReminder, pickMessage, neighborGroups, strollTarget, chatterDelay, freeSpot, KINDS } = require('./logic');
+const { exportFile, importFile, userIsBack, dueShared, takePresetTimed, createPet, createChosenPet, petsForEvent, normalizePet, normalizeState, dueReminder, pickMessage, neighborGroups, strollTarget, chatterDelay, freeSpot, KINDS } = require('./logic');
 const { pickScene, pettedLine } = require('./dialogues');
 const { startBridge, PORT } = require('./bridge');
 const { settingsFile, hookJson, hasHook, installHook } = require('./claudehook');
@@ -139,6 +139,8 @@ const publicPet = (p) => ({ id: p.id, name: p.name, species: p.species, color: p
 function say(id, text, { ms, mood = 'talk', open = false } = {}) {
   const e = live.get(id);
   if (!e || !text) return;
+  // Bip spricht immer in Grossbuchstaben – auch in Szenen, beim Streicheln und bei Meldungen
+  if (petById(id)?.species === 'robot') text = text.toLocaleUpperCase('de-DE');
   ms = ms || Math.min(14000, 2600 + text.length * 55);
   e.busyUntil = Date.now() + ms;
   send(id, 'pet:say', { text, ms, mood, open });
@@ -149,8 +151,15 @@ async function openApp(pet) {
   const t = pet.target;
   if (!t) { send(pet.id, 'pet:mood', 'happy'); return; }
   if (/^https?:\/\//i.test(t)) { shell.openExternal(t); send(pet.id, 'pet:mood', 'happy'); return; }
+  // installierte App aus der Windows-App-Liste (auch Store-Apps wie der Rechner): wie aus dem Startmenue starten
+  if (/^shell:AppsFolder\\/i.test(t) && process.platform === 'win32') {
+    require('node:child_process').spawn('explorer.exe', [t], { detached: true, stdio: 'ignore' }).unref();
+    send(pet.id, 'pet:mood', 'happy');
+    return;
+  }
   if (!fs.existsSync(t)) {
-    say(pet.id, `Ich finde ${APPS[pet.kind].label === 'Keine' ? 'die App' : APPS[pet.kind].label} nicht 😿 Schau mal in die Einstellungen (Rechtsklick).`, { mood: 'sad', ms: 7000 });
+    const label = pet.appName || (APPS[pet.kind].label === 'Keine' ? 'die App' : APPS[pet.kind].label);
+    say(pet.id, `Ich finde ${label} nicht 😿 Schau mal in die Einstellungen (Rechtsklick).`, { mood: 'sad', ms: 7000 });
     return;
   }
   const err = await shell.openPath(t);
@@ -237,6 +246,7 @@ ipcMain.on('pet:context', (ev) => {
     { type: 'separator' },
     ...(pet.target ? [{ label: `${APPS[pet.kind].label === 'Keine' ? 'App' : APPS[pet.kind].label} öffnen`, click: () => openApp(pet) }] : []),
     ...talentMenu(pet),
+    ...characterMenu(pet),
     { label: 'Sag was!', click: () => speakNow(pet) },
     { label: 'Ausblenden (in den Einstellungen wieder einblenden)', click: () => setPetHidden(pet.id, true) },
     { label: pet.muted ? 'Aufwecken' : 'Schlafen legen (keine Erinnerungen)', click: () => { pet.muted = !pet.muted; save(); refreshPet(pet); if (!pet.muted) say(pet.id, 'Bin wieder wach! ☀️', { mood: 'happy' }); } },
@@ -490,7 +500,8 @@ function nookCards() {
 }
 
 // ----- Charakter-Aktionen im Begleiter-Modus -----
-const isCompanion = (p) => p.kind === 'none' && p.talent && p.talent.enabled && !p.hidden && !p.muted;
+// Charakter-Aktionen laufen immer (auch mit verbundener App) – nur Talent aus, schlafend oder ausgeblendet stoppt sie
+const isCompanion = (p) => p.talent && p.talent.enabled && !p.hidden && !p.muted;
 const free = (p) => { const e = live.get(p.id); return e && !p.hidden && !e.inTalk && !e.dragging && !e.petting && !e.breath; };
 // naechstes freies Pet neben pet (gleiche Hoehe, hoechstens maxDx Pixel weg)
 function neighborOf(pet, maxDx = W * 1.2) {
@@ -627,7 +638,8 @@ function companionAction(pet, r) {
       setTimeout(() => walkTo(pet, px, 4.2), 1400);
       return;
     }
-    case 'roll': send(pet.id, 'pet:fx', { name: 'roll', ms: 1100 }); return;
+    case 'roll': send(pet.id, 'pet:fx', { name: 'roll', ms: 1600 }); return;
+    case 'eat': send(pet.id, 'pet:fx', { name: 'eat', ms: 6000 }); return; // Bambus mampft
     case 'pompom': send(pet.id, 'pet:prop', { emoji: '🎉', ms: 4500 }); return;
     case 'sysreport': { // Bip: Systembericht mit echten Werten, gross auf dem Bildschirm
       const s = systemStats();
@@ -662,8 +674,23 @@ function onUnlocked() {
     const m = memOf(p);
     if (m.lockDay !== day) { m.lockDay = day; m.lockTotal = 0; }
     m.lockTotal += min;
-    setTimeout(() => { say(p.id, lockLine(min, m.lockTotal, how), { mood: 'alert', ms: 10000 }); send(p.id, 'pet:prop', { emoji: '⏱️', ms: 10000 }); }, 2500);
+    const total = m.lockTotal;
+    whenUserIsBack(() => {
+      if (!live.has(p.id)) return;
+      say(p.id, lockLine(min, total, how), { mood: 'alert', ms: 25000 }); // lang genug zum Lesen
+      send(p.id, 'pet:prop', { emoji: '⏱️', ms: 25000 });
+    });
   }
+}
+// Nach dem Entsperren/Aufwachen erst reden, wenn man wirklich wieder etwas sieht: Bildschirme brauchen oft
+// ein paar Sekunden. Wir warten auf eine neue Eingabe (Maus/Tastatur) fruehestens 5 s nach dem Entsperren –
+// das Tippen der PIN zaehlt also nicht. Ohne Eingabe spaetestens nach 30 s.
+function whenUserIsBack(fn, { minWait = 5000, maxWait = 30000 } = {}) {
+  const start = Date.now();
+  const timer = setInterval(() => {
+    const waited = Date.now() - start;
+    if (userIsBack(waited, powerMonitor.getSystemIdleTime() * 1000, minWait, maxWait)) { clearInterval(timer); fn(); }
+  }, 1000);
 }
 // Info am Namensschild sofort aktualisieren (z. B. nach Lottis Klick)
 function e2update(pet) {
@@ -675,8 +702,16 @@ function e2update(pet) {
 }
 
 // Klick auf ein Begleiter-Pet: Blubb zaehlt ein Glas, Beau zieht eine Karte, Bip zeigt den Systembericht
-function companionClick(pet) {
-  if (!isCompanion(pet)) return false;
+// Mit verbundener App: die Klick-Aktionen des Charakters stehen im Rechtsklick-Menue
+function characterMenu(pet) {
+  if (pet.kind === 'none' || !isCompanion(pet)) return [];
+  const label = { axolotl: '🎉 Aufgabe erledigt', blob: '💧 Glas Wasser getrunken', beau: '🎴 Tageskarte ziehen', robot: '📊 Systembericht' }[pet.species];
+  return label ? [{ label, click: () => companionClick(pet, true) }] : [];
+}
+
+// Ohne App per Klick; mit App ueber das Rechtsklick-Menue (force), damit der Klick die App oeffnen kann
+function companionClick(pet, force = false) {
+  if (!isCompanion(pet) || (!force && pet.kind !== 'none')) return false;
   const mem = memOf(pet);
   if (pet.species === 'blob') {
     mem.glasses = (mem.glasses || 0) + 1;
@@ -774,6 +809,8 @@ function talentTick() {
     if (r.action === 'scare') { ghostScare(pet); continue; }
     if (r.text) say(pet.id, r.text, { mood: r.mood, ms: r.ms, open: !!(r.open && pet.target) });
     else if (r.mood) send(pet.id, 'pet:mood', { mood: r.mood, ms: 1600 });
+    // was der Text sagt, soll man auch sehen: Bambus kaut -> Fress-Animation, purzelt -> Purzelbaum
+    if (pet.species === 'panda' && r.text && !r.action) { if (/kaut|mampf|Bambus\*/.test(r.text)) send(pet.id, 'pet:fx', { name: 'eat', ms: 5000 }); else if (/purzel|roll mich/i.test(r.text)) send(pet.id, 'pet:fx', { name: 'roll', ms: 1600 }); }
     if (typeof r.action === 'string' && COMPANION_ACTIONS.has(r.action)) companionAction(pet, r);
     else if (r.action) applyTalentAction(pet, r.action);
     // Huhus Quiz: die Antwort kommt 10 Sekunden spaeter
@@ -903,7 +940,7 @@ function updateWatch() {
   if (need && !stopWatch && !SMOKE) stopWatch = startWatch(onWatch, log);
   if (!need && stopWatch) { stopWatch(); stopWatch = null; if (autoHidden || fullDisplayId != null) { autoHidden = false; fullDisplayId = null; applyVisibility(); } }
 }
-const COMPANION_ACTIONS = new Set(['territory', 'gift', 'yawn', 'gossip', 'paper', 'trick', 'sneak', 'slide', 'sprint', 'roll', 'pompom', 'sysreport']);
+const COMPANION_ACTIONS = new Set(['territory', 'gift', 'yawn', 'gossip', 'paper', 'trick', 'sneak', 'slide', 'sprint', 'roll', 'eat', 'pompom', 'sysreport']);
 // Quak hat mit der Zunge eine "Fliege" (den Mauszeiger) erwischt
 ipcMain.on('pet:fly', (ev) => { const [id] = entryOf(ev.sender); const p = id && petById(id); if (p) { const m = memOf(p); m.flies = (m.flies || 0) + 1; } });
 ipcMain.on('pet:battery', (_ev, b) => { if (b && typeof b.level === 'number') battery = { level: Math.max(0, Math.min(1, b.level)), charging: !!b.charging }; });
@@ -972,13 +1009,16 @@ const sendSettings = () => settingsWin && !settingsWin.isDestroyed() && settings
 function settingsPayload() {
   return {
     state,
-    apps: Object.fromEntries(KINDS.map((k) => [k, { label: APPS[k].label, hint: APPS[k].hint, target: APPS[k].target(), group: APPS[k].group, icon: APPS[k].icon, eventsLabel: APPS[k].eventsLabel }])),
+    apps: Object.fromEntries(KINDS.map((k) => { const a = APPS[k]; const t = a.target(); return [k, { label: a.label, hint: a.hint, target: t, group: a.group, icon: a.icon, eventsLabel: a.eventsLabel,
+      github: a.github || '', needs: a.needs || a.label, installed: a.github ? !!t && fs.existsSync(t) : true,
+      caps: { opens: !!t || k === 'custom', reminds: !!(a.reminders.enabled || a.reminders.timed.length), reports: !!(a.listens || ['nexus', 'dan', 'nook'].includes(k)) } }]; })),
     groups: GROUPS,
     species: Object.fromEntries(Object.entries(SPECIES).map(([k, v]) => [k, v.label])),
     speciesColors: Object.fromEntries(Object.entries(SPECIES).map(([k, v]) => [k, v.color])),
     talents: TALENTS,
     // eine typische Zeile je Tier fuer den Steckbrief (so klingt es)
     samples: Object.fromEntries(Object.keys(SPECIES).map((sp) => [sp, sp === 'owl' ? FACTS[0] : (COMPANION[sp] || [])[0] || ''])),
+    companion: COMPANION, // die ~20 Standard-Sprueche je Tier (fuer "Eigene Sprueche")
     port: PORT,
     packaged: app.isPackaged,
     version: app.getVersion(),
@@ -1009,6 +1049,69 @@ ipcMain.handle('settings:save-pet', (_e, data) => {
 ipcMain.handle('settings:add-pet', (_e, choice) => (typeof choice === 'object' && choice
   ? addChosenPet({ kind: String(choice.kind || ''), species: String(choice.species || ''), name: String(choice.name || '') })
   : addPet(KINDS.includes(choice) || choice === 'beau' ? choice : 'none')));
+// ---------- Installierte Apps (fuer die Funktions-Suche) ----------
+// Windows: die Liste des Startmenues (auch Store-Apps wie der Rechner) – gestartet wird ueber shell:AppsFolder\<AppID>.
+// macOS: die Programme in /Applications. Nur lokal gelesen, alle 10 Minuten neu.
+let appsCache = { at: 0, list: [] };
+async function installedApps() {
+  if (Date.now() - appsCache.at < 10 * 60000 && appsCache.list.length) return appsCache.list;
+  let list = [];
+  try {
+    if (process.platform === 'win32') {
+      const ps = '[Console]::OutputEncoding = [Text.Encoding]::UTF8; Get-StartApps | Select-Object Name, AppID | ConvertTo-Json -Compress';
+      const out = await new Promise((res) => {
+        require('node:child_process').execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', ps], { windowsHide: true, maxBuffer: 4 * 1024 * 1024, encoding: 'utf8' }, (err, stdout) => res(err ? '' : stdout));
+      });
+      const raw = out.trim() ? JSON.parse(out) : [];
+      list = (Array.isArray(raw) ? raw : [raw])
+        .filter((a) => a && a.Name && a.AppID && !/deinstall|uninstall|readme|hilfe|help|website|documentation/i.test(a.Name))
+        .map((a) => ({ name: String(a.Name).slice(0, 80), target: `shell:AppsFolder\\${a.AppID}` }));
+    } else if (process.platform === 'darwin') {
+      list = fs.readdirSync('/Applications').filter((n) => n.endsWith('.app')).map((n) => ({ name: n.replace(/\.app$/, ''), target: path.join('/Applications', n) }));
+    }
+  } catch (e) { log('[apps]', e.message); }
+  const seen = new Set();
+  list = list.filter((a) => (seen.has(a.name.toLowerCase()) ? false : seen.add(a.name.toLowerCase()))).sort((a, b) => a.name.localeCompare(b.name, 'de'));
+  appsCache = { at: Date.now(), list };
+  return list;
+}
+ipcMain.handle('settings:installed-apps', () => installedApps());
+// Link im Browser oeffnen (nur die GitHub-Seiten der eigenen Apps)
+ipcMain.handle('settings:open-link', (_e, url) => { if (/^https:\/\/github\.com\/CaseyMazey\/[\w-]+$/.test(url)) shell.openExternal(url); });
+// Pet mit einer installierten App verbinden (Funktion "Eigene App" mit Name und Startpfad)
+ipcMain.handle('settings:connect-app', (_e, id, app) => {
+  const old = petById(id);
+  if (!old || !app || typeof app.target !== 'string') return null;
+  const pet = normalizePet({ ...old, kind: 'custom', target: app.target, appName: String(app.name || ''), events: false });
+  state.pets[state.pets.indexOf(old)] = pet;
+  save(); refreshPet(pet); updateTray();
+  return pet;
+});
+
+// ---------- Pets exportieren / importieren (.dcpet) ----------
+ipcMain.handle('settings:export-pets', async (_e, id) => {
+  const pets = id ? state.pets.filter((p) => p.id === id) : state.pets;
+  if (!pets.length) return { ok: false };
+  const name = id ? `${pets[0].name}.dcpet` : `Desktop-Companions-Pets-${new Date().toISOString().slice(0, 10)}.dcpet`;
+  const r = await dialog.showSaveDialog(settingsWin, { defaultPath: name, filters: [{ name: 'Desktop-Companions-Pet', extensions: ['dcpet'] }] });
+  if (r.canceled || !r.filePath) return { ok: false };
+  fs.writeFileSync(r.filePath, JSON.stringify(exportFile(pets), null, 2));
+  return { ok: true, file: r.filePath, count: pets.length };
+});
+ipcMain.handle('settings:import-pets', async () => {
+  const r = await dialog.showOpenDialog(settingsWin, { properties: ['openFile'], filters: [{ name: 'Desktop-Companions-Pet', extensions: ['dcpet', 'json'] }] });
+  if (r.canceled || !r.filePaths[0]) return { ok: false };
+  try {
+    const pets = importFile(JSON.parse(fs.readFileSync(r.filePaths[0], 'utf8').replace(/^﻿/, '')));
+    const free = 20 - state.pets.length;
+    if (free <= 0) return { ok: false, error: 'Es sind schon 20 Pets da – mehr gehen nicht.' };
+    const added = pets.slice(0, free).map((p) => placeNewPet(p));
+    // Hinweis, wenn eine App fehlt (z. B. Pfad von einem anderen PC)
+    const missing = added.filter((p) => p.target && !/^https?:|^shell:AppsFolder/i.test(p.target) && !fs.existsSync(p.target)).map((p) => p.name);
+    return { ok: true, count: added.length, ids: added.map((p) => p.id), missing };
+  } catch (e) { return { ok: false, error: e.message }; }
+});
+
 // Claude-Code-Hook: Status und Eintragen per Knopf (schreibt ~/.claude/settings.json, vorher Sicherung .bak)
 ipcMain.handle('settings:hook-status', () => ({ installed: hasHook(settingsFile(), PORT), file: settingsFile(), json: hookJson(PORT) }));
 ipcMain.handle('settings:hook-install', () => {

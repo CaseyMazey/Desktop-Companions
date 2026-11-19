@@ -205,7 +205,16 @@
       <ellipse cx="45" cy="63" rx="10" ry="12" fill="#2b2b33" transform="rotate(-24 45 63)"/><ellipse cx="75" cy="63" rx="10" ry="12" fill="#2b2b33" transform="rotate(24 75 63)"/>
       <g class="eyes"><circle cx="46" cy="62" r="7" fill="#fff"/><circle cx="74" cy="62" r="7" fill="#fff"/></g>
       ${eyes(46, 74, 62, -1, '#fff')}${cheeks(31, 89, 80)}
-      <ellipse cx="60" cy="76" rx="4.5" ry="3" fill="#2b2b33"/>${mouth(60, 83)}`,
+      <ellipse cx="60" cy="76" rx="4.5" ry="3" fill="#2b2b33"/>${mouth(60, 83)}
+      <!-- Bambus essen: Stange mit Blaettern quer in den Pfoten, Kaumund (Klasse "eat") -->
+      <g class="bamboo">
+        <path d="M30 98 L96 74" stroke="#4d7c0f" stroke-width="7" stroke-linecap="round"/>
+        <path d="M30 98 L96 74" stroke="#84cc16" stroke-width="4.5" stroke-linecap="round"/>
+        <path d="M52 90.2 l1.6 4.4 M74 82.3 l1.6 4.4" stroke="#4d7c0f" stroke-width="1.8" stroke-linecap="round"/>
+        <path d="M90 76 q10 -14 22 -12 q-8 10 -22 12 z M86 78 q6 -16 2 -26 q-8 12 -2 26 z" fill="#65a30d" stroke="#3f6212" stroke-width="1.2" stroke-linejoin="round"/>
+        <ellipse cx="34" cy="97" rx="8" ry="6" fill="#2b2b33"/><ellipse cx="88" cy="78" rx="8" ry="6" fill="#2b2b33"/>
+        <ellipse class="chew" cx="60" cy="84" rx="5" ry="3" fill="#7f1d1d" stroke="#1e293b" stroke-width="1.5"/>
+      </g>`,
 
     // Axolotl: breiter Kopf, wedelnde Kiemen, laechelt immer
     axolotl: () => `
@@ -229,7 +238,7 @@
       <ellipse class="belly" cx="60" cy="96" rx="20" ry="13" fill="#fef3c7" fill-opacity=".75"/>
       <path class="stripe" d="M46 92 h28 M48 100 h24" stroke-width="2" stroke-linecap="round" opacity=".5"/>
       <ellipse class="dark" cx="45" cy="108" rx="8" ry="4.5"/><ellipse class="dark" cx="75" cy="108" rx="8" ry="4.5"/>
-      ${eyes(46, 74, 60)}${cheeks(32, 88, 74)}
+      ${eyes(46, 74, 60, 1)}${cheeks(32, 88, 74)}
       <circle cx="56" cy="72" r="1.4" fill="#1e293b"/><circle cx="64" cy="72" r="1.4" fill="#1e293b"/>${mouth(60, 79)}`,
 
     // Pilz: Hut in waehlbarer Farbe mit weissen Punkten, Gesicht auf dem Stiel

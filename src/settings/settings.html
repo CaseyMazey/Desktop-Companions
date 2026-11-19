@@ -8,171 +8,192 @@
 </head>
 <body>
   <aside>
-    <div class="brand">
-      <h1>🐾 Desktop Companions</h1>
-      <button id="theme-toggle" class="icon-btn" type="button" aria-label="Hell/Dunkel umschalten" title="Hell/Dunkel umschalten"></button>
-    </div>
+    <h1 class="brand">🐾 Desktop Companions</h1>
+    <button id="add" class="primary add-btn" type="button">+ Neues Pet</button>
     <h2 class="side-title">Deine Pets</h2>
     <ul id="list"></ul>
-    <div class="add">
-      <button id="add" class="primary">+ Neues Pet</button>
-    </div>
-    <nav class="side-bottom">
-      <button id="nav-settings" class="nav-btn" type="button">⚙️ Einstellungen</button>
-      <p class="hint" id="side-version"></p>
-    </nav>
+    <p class="hint side-version" id="side-version"></p>
   </aside>
 
-  <main id="editor">
-    <p class="empty">Wähle links ein Pet aus oder leg ein neues an.</p>
-  </main>
+  <div class="content">
+    <!-- Kopfzeile: Hell/Dunkel und Einstellungen immer sichtbar oben rechts -->
+    <header class="topbar">
+      <span class="topbar-title" id="topbar-title"></span>
+      <button id="theme-toggle" class="icon-btn" type="button" aria-label="Hell/Dunkel umschalten" title="Hell/Dunkel umschalten"></button>
+      <button id="nav-settings" class="nav-btn" type="button">⚙️ Einstellungen</button>
+    </header>
+    <main id="editor">
+      <p class="empty">Wähle links ein Pet aus oder leg ein neues an.</p>
+    </main>
+  </div>
 
-  <!-- ===== Ein Pet: Steckbrief oben, darunter Aussehen, Verbindung, Erweitert ===== -->
+  <!-- ===== Ein Pet: Steckbrief + Funktion nebeneinander, darunter Talent / Charakter / Aussehen ===== -->
   <template id="tpl-editor">
-    <section class="profile">
-      <div class="profile-head">
-        <div id="preview" class="profile-art" aria-hidden="true"></div>
-        <div class="profile-main">
-          <div class="profile-top">
-            <input id="f-name" class="title" maxlength="24" aria-label="Name">
-            <span id="p-special" class="special-badge" hidden>✨ Special · aus Storybound</span>
+    <div class="pet-top">
+      <section class="tile steckbrief">
+        <div class="sb-head">
+          <div id="preview" class="sb-art" aria-hidden="true"></div>
+          <div class="sb-main">
+            <div class="sb-name-row">
+              <input id="f-name" class="title" maxlength="24" aria-label="Name">
+              <span id="p-special" class="special-badge" hidden>✨ Special · aus Storybound</span>
+            </div>
+            <blockquote class="sb-quote" id="p-quote"></blockquote>
           </div>
-          <p class="profile-sub" id="p-sub"></p>
-          <blockquote class="profile-quote" id="p-quote"></blockquote>
+          <button id="say" type="button" title="Etwas sagen lassen">💬 Sag was</button>
         </div>
-        <button id="say" type="button">💬 Sag was</button>
-      </div>
-      <div class="facts" id="talent-box">
-        <div class="fact">
-          <h3>🎭 Charakter</h3>
-          <p id="p-character"></p>
-        </div>
-        <div class="fact">
-          <h3>⭐ Talent · <span id="t-title"></span></h3>
-          <p id="t-desc"></p>
-          <label class="check"><input type="checkbox" id="t-enabled"> Talent eingeschaltet</label>
-          <div class="row" id="t-options"></div>
-        </div>
-        <div class="fact" id="p-comp">
-          <h3>✨ Als Begleiter <span class="pill" id="p-comp-state"></span></h3>
-          <p id="t-companion"></p>
-        </div>
-      </div>
-    </section>
+        <dl class="sb-table">
+          <dt>Art</dt><dd id="p-art"></dd>
+          <dt>Charakter</dt><dd><input id="p-character" class="inline-edit" maxlength="200" aria-label="Charakter"></dd>
+          <dt>Mag</dt><dd><input id="p-likes" class="inline-edit" maxlength="200" aria-label="Mag"></dd>
+          <dt>Mag nicht</dt><dd><input id="p-dislikes" class="inline-edit" maxlength="200" aria-label="Mag nicht"></dd>
+          <dt>Talent</dt><dd><strong id="p-talent"></strong> – <span id="p-talent-what"></span></dd>
+          <dt>Dabei seit</dt><dd id="p-created"></dd>
+        </dl>
+        <p class="hint">Charakter, Mag und Mag nicht kannst du direkt ändern – leer lassen = wie das Tier normalerweise ist.</p>
+      </section>
 
-    <fieldset>
-      <legend>Aussehen &amp; Verhalten</legend>
-      <div class="row">
-        <label>Tier <select id="f-species"></select></label>
-        <label>Farbe <input type="color" id="f-color"></label>
-        <label class="grow">Größe <input type="range" id="f-size" min="70" max="160" step="5"></label>
-      </div>
-      <div class="row">
-        <label class="check"><input type="checkbox" id="f-wander"> wandert frei herum (aus: bleibt in der Nähe seines Platzes)</label>
-        <label class="check"><input type="checkbox" id="f-muted"> schläft (keine Erinnerungen, keine Gespräche)</label>
-      </div>
-    </fieldset>
-
-    <fieldset>
-      <legend>Verbindung</legend>
-      <div class="row">
-        <label>Verbunden mit
-          <select id="f-kind"></select>
-        </label>
-        <label class="grow">Öffnet beim Klick (Programm, Datei oder https://-Adresse)
-          <span class="inline"><input id="f-target" spellcheck="false"><button id="pick">Durchsuchen …</button><button id="open">Testen</button></span>
-        </label>
-      </div>
-      <p class="hint" id="kind-hint"></p>
-      <label class="check"><input type="checkbox" id="f-events"> <span id="events-label">Meldungen der App anzeigen</span></label>
-      <div class="hook" id="hook-box" hidden>
-        <p class="hint"><strong>Einmal einrichten:</strong> Damit Claude Bescheid sagt, wenn es fertig ist oder dich braucht, muss Claude Code
-          den Pets eine Nachricht schicken. Das trägt ein kleiner Eintrag (Hook) in <code>.claude/settings.json</code> ein – gilt für Claude Code im Terminal und in der Claude-App.</p>
-        <div class="inline-row">
-          <button id="hook-install" type="button" class="primary">In Claude Code eintragen</button>
-          <span class="hint" id="hook-status" aria-live="polite"></span>
-        </div>
-        <details>
-          <summary class="hint">Lieber selbst eintragen?</summary>
-          <pre id="hook-code"></pre>
-          <button id="hook-copy" type="button">Kopieren</button> <span class="hint" id="hook-copied"></span>
+      <section class="tile funktion">
+        <h3>🔗 Funktion</h3>
+        <div class="fn-current" id="fn-current"></div>
+        <input id="fn-search" type="search" placeholder="App oder Funktion suchen … (z. B. Rechner, Outlook, Claude)" aria-label="App oder Funktion suchen" autocomplete="off">
+        <div class="fn-results" id="fn-results" role="listbox" aria-label="Apps und Funktionen"></div>
+        <details class="fn-more">
+          <summary class="hint">Was beim Klick geöffnet wird &amp; Meldungen</summary>
+          <label>Öffnet beim Klick (Programm, Datei oder https://-Adresse)
+            <span class="inline"><input id="f-target" spellcheck="false"><button id="pick" type="button">Durchsuchen …</button><button id="open" type="button">Testen</button></span>
+          </label>
+          <label class="check"><input type="checkbox" id="f-events"> <span id="events-label">Meldungen der App anzeigen</span></label>
         </details>
-      </div>
-    </fieldset>
+        <div class="hook" id="hook-box" hidden>
+          <p class="hint"><strong>Einmal einrichten:</strong> Damit Claude Bescheid sagt, wenn es fertig ist oder dich braucht, trägt ein kleiner Eintrag (Hook) in <code>.claude/settings.json</code> das ein – gilt für Claude Code im Terminal und in der Claude-App.</p>
+          <div class="inline-row">
+            <button id="hook-install" type="button" class="primary">In Claude Code eintragen</button>
+            <span class="hint" id="hook-status" aria-live="polite"></span>
+          </div>
+          <details>
+            <summary class="hint">Lieber selbst eintragen?</summary>
+            <pre id="hook-code"></pre>
+            <button id="hook-copy" type="button">Kopieren</button> <span class="hint" id="hook-copied"></span>
+          </details>
+        </div>
+      </section>
+    </div>
 
-    <details class="advanced">
-      <summary>Eigene Sprüche &amp; Erinnerungen <span class="hint">(erweitert)</span></summary>
+    <div class="pet-tiles">
+      <section class="tile" id="talent-box">
+        <h3>⭐ Talent · <span id="t-title"></span></h3>
+        <dl class="help">
+          <dt>Was <span class="pet-name"></span> für dich tut</dt><dd id="t-what"></dd>
+          <dt>Wann</dt><dd id="t-when"></dd>
+          <dt>Du kannst</dt><dd id="t-you"></dd>
+        </dl>
+        <label class="check"><input type="checkbox" id="t-enabled"> Talent eingeschaltet</label>
+        <div class="row" id="t-options"></div>
+      </section>
+      <section class="tile" id="p-comp">
+        <h3>✨ Charakter-Extras</h3>
+        <p id="t-companion"></p>
+        <p class="hint" id="p-click"></p>
+      </section>
+      <section class="tile">
+        <h3>🎨 Aussehen &amp; Verhalten</h3>
+        <div class="row">
+          <label>Tier <select id="f-species"></select></label>
+          <label>Farbe <input type="color" id="f-color"></label>
+        </div>
+        <label>Größe <input type="range" id="f-size" min="70" max="160" step="5"></label>
+        <label class="check"><input type="checkbox" id="f-wander"> wandert frei herum</label>
+        <label class="check"><input type="checkbox" id="f-muted"> schläft (keine Erinnerungen, keine Gespräche)</label>
+      </section>
+    </div>
+
+    <details class="tile advanced">
+      <summary>💬 Eigene Sprüche &amp; Erinnerungen <span class="hint">(erweitert)</span></summary>
       <div class="advanced-body">
-        <label class="check"><input type="checkbox" id="r-enabled"> regelmäßig etwas sagen</label>
+        <label>Sprüche von <span class="pet-name"></span> (einer pro Zeile) – so klingt es zwischendurch, egal womit es verbunden ist
+          <textarea id="f-lines" rows="8"></textarea>
+        </label>
+        <button id="lines-reset" type="button" class="small">Standard-Sprüche wiederherstellen</button>
+        <hr>
+        <label class="check"><input type="checkbox" id="r-enabled"> regelmäßig an die Funktion erinnern</label>
         <div class="row">
           <label class="inline-label">alle <input type="number" id="r-interval" min="5" max="600" class="short"> Minuten</label>
           <label>von <input type="time" id="r-from"></label>
           <label>bis <input type="time" id="r-to"></label>
           <label class="check"><input type="checkbox" id="r-workdays"> nur Mo–Fr</label>
         </div>
-        <label>Sprüche (einer pro Zeile, zufällige Reihenfolge)
-          <textarea id="r-messages" rows="5"></textarea>
+        <label>Erinnerungen (einer pro Zeile)
+          <textarea id="r-messages" rows="4"></textarea>
         </label>
-        <p class="hint">Feste Uhrzeiten wie die Mittagspause gelten für alle Pets und stehen jetzt unter <a href="#" id="go-settings">⚙️ Einstellungen</a>.</p>
+        <p class="hint">Feste Uhrzeiten wie die Mittagspause gelten für alle Pets und stehen unter <a href="#" id="go-settings">⚙️ Einstellungen</a>.</p>
       </div>
     </details>
 
-    <footer>
+    <footer class="pet-foot">
       <span class="hint" id="saved"></span>
-      <button id="remove" class="danger">Pet entfernen</button>
+      <button id="export" type="button">⬇️ Pet exportieren</button>
+      <button id="remove" class="danger" type="button">Pet entfernen</button>
     </footer>
   </template>
 
   <!-- ===== Einstellungen fuer alle Pets ===== -->
   <template id="tpl-settings">
-    <header class="page-head">
-      <h2 class="page-title">⚙️ Einstellungen</h2>
-      <p class="hint">Gilt für alle Pets.</p>
-    </header>
+    <div class="settings-grid">
+      <fieldset>
+        <legend>Darstellung</legend>
+        <div class="segmented" id="g-theme" role="radiogroup" aria-label="Hell oder dunkel">
+          <button type="button" data-value="dark" role="radio">🌙 Dunkel</button>
+          <button type="button" data-value="light" role="radio">☀️ Hell</button>
+          <button type="button" data-value="system" role="radio">🖥️ Wie Windows</button>
+        </div>
+      </fieldset>
 
-    <fieldset>
-      <legend>Darstellung</legend>
-      <div class="segmented" id="g-theme" role="radiogroup" aria-label="Hell oder dunkel">
-        <button type="button" data-value="dark" role="radio">🌙 Dunkel</button>
-        <button type="button" data-value="light" role="radio">☀️ Hell</button>
-        <button type="button" data-value="system" role="radio">🖥️ Wie Windows</button>
-      </div>
-    </fieldset>
+      <fieldset>
+        <legend>Pets sichern &amp; teilen</legend>
+        <p class="hint">Speichert deine Pets mit Charakter, Sprüchen und Funktion in einer Datei – zum Sichern oder Weitergeben.</p>
+        <div class="row">
+          <button id="g-export" type="button">⬇️ Alle Pets sichern</button>
+          <button id="g-import" type="button">⬆️ Pets importieren</button>
+        </div>
+        <p class="hint" id="g-io-status" aria-live="polite"></p>
+      </fieldset>
 
-    <fieldset>
-      <legend>Feste Uhrzeiten</legend>
-      <p class="hint">Zum Beispiel die Mittagspause oder der Feierabend – gilt auch an freien Tagen. Das gewählte Pet sagt es; schläft es oder ist es ausgeblendet, übernimmt ein anderes.</p>
-      <div id="g-timed" class="timed-list"></div>
-      <button id="g-timed-add" type="button">+ Uhrzeit hinzufügen</button>
-    </fieldset>
+      <fieldset class="wide">
+        <legend>Feste Uhrzeiten</legend>
+        <p class="hint">Zum Beispiel die Mittagspause oder der Feierabend – gilt auch an freien Tagen. Das gewählte Pet sagt es; schläft es oder ist es ausgeblendet, übernimmt ein anderes.</p>
+        <div id="g-timed" class="timed-list"></div>
+        <button id="g-timed-add" type="button">+ Uhrzeit hinzufügen</button>
+      </fieldset>
 
-    <fieldset>
-      <legend>Gespräche</legend>
-      <p class="hint">Stehen Pets nebeneinander, plaudern sie ab und zu miteinander.</p>
-      <div class="row">
-        <label>Wie oft
-          <select id="chatter">
-            <option value="aus">aus</option><option value="selten">selten</option><option value="normal">normal</option><option value="oft">oft</option>
-          </select>
-        </label>
-        <button id="chat-now" type="button">Jetzt plaudern</button>
-      </div>
-    </fieldset>
+      <fieldset>
+        <legend>Gespräche</legend>
+        <p class="hint">Stehen Pets nebeneinander, plaudern sie ab und zu miteinander.</p>
+        <div class="row">
+          <label>Wie oft
+            <select id="chatter">
+              <option value="aus">aus</option><option value="selten">selten</option><option value="normal">normal</option><option value="oft">oft</option>
+            </select>
+          </label>
+          <button id="chat-now" type="button">Jetzt plaudern</button>
+        </div>
+      </fieldset>
 
-    <fieldset id="autostart-row">
-      <legend>Start</legend>
-      <label class="check"><input type="checkbox" id="autostart"> Mit Windows starten</label>
-    </fieldset>
+      <fieldset id="autostart-row">
+        <legend>Start</legend>
+        <label class="check"><input type="checkbox" id="autostart"> Mit Windows starten</label>
+      </fieldset>
 
-    <fieldset>
-      <legend>Updates</legend>
-      <p class="hint" id="version"></p>
-      <p class="hint" id="update-status" aria-live="polite"></p>
-      <div class="row">
-        <button id="update-btn" type="button">Nach Updates suchen</button>
-        <label class="check"><input type="checkbox" id="auto-update"> automatisch aktualisieren</label>
-      </div>
-    </fieldset>
+      <fieldset>
+        <legend>Updates</legend>
+        <p class="hint" id="version"></p>
+        <p class="hint" id="update-status" aria-live="polite"></p>
+        <div class="row">
+          <button id="update-btn" type="button">Nach Updates suchen</button>
+          <label class="check"><input type="checkbox" id="auto-update"> automatisch aktualisieren</label>
+        </div>
+      </fieldset>
+    </div>
   </template>
 
   <!-- Neues Pet: erst das Tier, dann die Verbindung (Preset) -->
@@ -182,16 +203,17 @@
         <h2 id="create-title">Neues Pet</h2>
         <ol class="steps" aria-label="Schritte">
           <li id="step-1" class="on">1 · Tier</li>
-          <li id="step-2">2 · Verbindung</li>
+          <li id="step-2">2 · Funktion</li>
         </ol>
+        <button type="button" id="create-import" class="small">⬆️ Pet importieren</button>
         <button type="button" class="x" id="create-close" aria-label="Schließen">✕</button>
       </header>
       <section id="pane-1">
-        <p class="hint">Welches Tier soll es sein? Farbe und Größe kannst du danach noch ändern.</p>
+        <p class="hint">Wen möchtest du dabeihaben? Farbe und Größe kannst du danach noch ändern.</p>
         <div class="cards animals" id="animal-cards" role="radiogroup" aria-label="Tier"></div>
       </section>
       <section id="pane-2" hidden>
-        <p class="hint">Womit soll <strong id="chosen-animal"></strong> verbunden sein? Ein Klick aufs Pet öffnet dann diese App. „Ohne App“ macht es zum reinen Begleiter mit stärkerem Charakter.</p>
+        <p class="hint">Womit soll <strong id="chosen-animal"></strong> verbunden sein? Der Charakter bleibt immer – die Funktion bringt Extras dazu, und ein Klick aufs Pet öffnet die App. Weitere installierte Apps findest du danach in der Suche unter „Funktion“.</p>
         <div id="preset-groups"></div>
       </section>
       <footer class="create-foot">

@@ -24,7 +24,7 @@ test('Begleiter-Modus: jedes Tier hat Sprüche, Beschreibung und Schreck-Reaktio
 });
 
 test('Begleiter-Modus nur ohne App, mit Pause dazwischen', () => {
-  assert.equal(companionDue(pet('nook', 'dragon'), fresh(), ctx(at(10))), null, 'mit App: normal');
+  assert.ok(companionDue(pet('nook', 'dragon'), fresh(), ctx(at(10)), () => 0.9), 'mit App: Charakter bleibt (Bonusfunktion statt Ersatz)');
   const dragon = pet('none', 'dragon'); const mem = fresh();
   const r = companionDue(dragon, mem, ctx(at(10)), () => 0.9);
   assert.ok(r && r.text, 'ohne App: Energie-Spruch');
@@ -95,10 +95,10 @@ test('Charakter-Momente mit echtem Bezug', () => {
 
 test('Info am Namensschild', () => {
   assert.equal(companionInfo(pet('none', 'dragon'), fresh(), ctx(at(10), { battery: { level: 0.78, charging: true } })), '🔋 78 % ⚡');
-  assert.equal(companionInfo(pet('nook', 'dragon'), fresh(), ctx(at(10))), '', 'mit App keine Info');
+  assert.equal(companionInfo(pet('nook', 'dragon'), fresh(), ctx(at(10))), '🔌 kein Akku – volle Energie', 'mit App: Info bleibt');
   assert.equal(companionInfo(pet('none', 'bunny'), fresh(), ctx(at(14, 5))), '⏰ 14:05');
   assert.equal(companionInfo(pet('none', 'bunny'), { lockDay: '2026-11-19', lockTotal: 83 }, ctx(at(14, 5))), '⏰ 14:05 · 🔒 1:23 gesperrt');
-  assert.equal(companionInfo(pet('none', 'mushroom', { place: 'Berlin' }), { garden: 2 }, ctx(at(9), { weather: { berlin: { min: 1, max: 9, rain: 0, code: 0, wind: 40 } } })), '☀️ sonnig, windig · 🌱 2');
+  assert.equal(companionInfo(pet('none', 'mushroom', { place: 'Berlin' }), { garden: 2 }, ctx(at(9), { weather: { berlin: { min: 1, max: 9, rain: 0, code: 0, wind: 40 } } })), '☀️ sonnig, windig');
   assert.match(companionInfo(pet('none', 'fox', { endTime: '17:00' }), fresh(), ctx(at(15, 30))), /1:30 bis Feierabend/);
   assert.equal(companionInfo(pet('nook', 'owl'), fresh(), ctx(at(10), { cards: [{}, {}] })), '🗂️ 2 Karteikarten');
   assert.equal(companionInfo(pet('none', 'ghost'), { pets: 2 }, ctx(at(10))), '👻 Mut: 17 %');

@@ -24,7 +24,7 @@ const off = (messages, extra = {}) => ({ enabled: false, intervalMin: 60, onlyWo
 const APPS = {
   nexus: {
     label: 'NEXUS',
-    group: 'mine', icon: '🧭', source: '3C',
+    group: 'mine', icon: '🧭', source: '3C', github: 'https://github.com/CaseyMazey/NEXUS',
     target: where(['nexus', 'NEXUS.exe'], '/Applications/NEXUS.app', '/opt/NEXUS/nexus'),
     hint: 'Meldet sich, wenn ein Auftrag in 3C fertig ist oder Claude eine Entscheidung braucht.',
     eventsLabel: 'Melden, wenn ein Auftrag in 3C fertig ist oder Claude eine Entscheidung braucht',
@@ -33,7 +33,7 @@ const APPS = {
   },
   c3: {
     label: '3C',
-    group: 'mine', icon: '💬', source: '3C', listens: ['nexus'],
+    group: 'mine', icon: '💬', source: '3C', listens: ['nexus'], github: 'https://github.com/CaseyMazey/NEXUS', needs: 'NEXUS',
     target: where(['nexus', 'NEXUS.exe'], '/Applications/NEXUS.app', '/opt/NEXUS/nexus'),
     hint: 'Nur für 3C (Claude Code in NEXUS): sagt Bescheid, wenn ein Auftrag fertig ist, schiefging oder eine Entscheidung braucht. Sonst ist es still.',
     eventsLabel: 'Melden, wenn ein Auftrag in 3C fertig ist oder Claude eine Entscheidung braucht',
@@ -42,7 +42,7 @@ const APPS = {
   },
   dan: {
     label: 'DAN',
-    group: 'mine', icon: '📝',
+    group: 'mine', icon: '📝', github: 'https://github.com/CaseyMazey/DAN',
     eventsLabel: 'Meldungen von DAN anzeigen (sobald DAN welche schickt)',
     target: where(['dan-app', 'DAN.exe'], '/Applications/DAN.app', '/opt/DAN/dan'),
     hint: 'Erinnert dich regelmäßig daran aufzuschreiben, was du gerade machst.',
@@ -61,7 +61,7 @@ const APPS = {
   },
   nook: {
     label: 'Nook',
-    group: 'mine', icon: '🌱',
+    group: 'mine', icon: '🌱', github: 'https://github.com/CaseyMazey/Nook',
     eventsLabel: 'Meldungen von Nook anzeigen (sobald Nook welche schickt)',
     target: where(['nook-desktop', 'Nook.exe'], '/Applications/Nook.app', '/opt/Nook/nook-desktop'),
     hint: 'Sagt dir ab und zu etwas Nettes und erinnert dich an Pausen und Wasser.',
