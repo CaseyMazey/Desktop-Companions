@@ -32,7 +32,7 @@ function applyPet(p) {
   document.documentElement.style.setProperty('--size', `${p.size}px`);
   petEl.style.setProperty('--size', `${p.size}px`);
   if (speciesChanged) sprite.innerHTML = window.renderSpecies(p.species);
-  nameEl.textContent = p.name;
+  showName();
   mood = p.muted ? 'sleep' : 'idle';
   if (!moodTimer) setMood(mood);
   const on = (sp) => p.species === sp && p.talent && p.talent.enabled;
@@ -40,6 +40,13 @@ function applyPet(p) {
   updateNight();
   if (on('dragon')) watchBattery();              // Drache: Akku im Blick
   if (p.species !== 'mushroom') showGarden(0);
+}
+
+// Namensschild beim Drueberfahren: Name, im Begleiter-Modus mit Info (z. B. "Funke · 🔋 78 %")
+let info = '';
+function showName() {
+  nameEl.replaceChildren(document.createTextNode(pet ? pet.name : ''));
+  if (info) { const s = document.createElement('span'); s.className = 'info'; s.textContent = info; nameEl.appendChild(s); }
 }
 
 // ---------- Talente im Fenster ----------
@@ -251,6 +258,7 @@ api.on('pet:update', applyPet);
 api.on('pet:hover-reset', () => { over = false; });
 api.on('pet:say', showBubble);
 api.on('pet:timer', showTimer);
+api.on('pet:info', (t) => { info = typeof t === 'string' ? t.slice(0, 60) : ''; showName(); });
 api.on('pet:garden', (n) => showGarden(Math.max(0, Math.min(8, +n || 0))));
 // Stimmung kurz zeigen: 'happy' oder { mood: 'sleep', ms: 3500 } (Aktionen in Szenen)
 api.on('pet:mood', (m) => (typeof m === 'object' ? flash(m.mood, m.ms || 1600) : flash(m, 1600)));

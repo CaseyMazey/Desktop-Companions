@@ -10,7 +10,8 @@ const { createPet, createChosenPet, petsForEvent, normalizePet, normalizeState, 
 const { pickScene, pettedLine } = require('./dialogues');
 const { startBridge, PORT } = require('./bridge');
 const { settingsFile, hookJson, hasHook, installHook } = require('./claudehook');
-const { TALENTS, talentDue, shortEvent, BREATH, FOCUS, FOCUS_LINES, TIMER_LINES } = require('./talents');
+const { TALENTS, talentDue, companionDue, companionInfo, SCARED, shortEvent, BREATH, FOCUS, FOCUS_LINES, TIMER_LINES } = require('./talents');
+const { loadNookCards } = require('./nookcards');
 const { startWatch } = require('./watch-win');
 const { Updater } = require('./updater');
 
@@ -215,6 +216,7 @@ ipcMain.on('pet:petting', (ev, on) => {
 ipcMain.on('pet:petted', (ev) => {
   const [id, e] = entryOf(ev.sender);
   const pet = id && petById(id);
+  if (pet) { e.tmem = e.tmem || {}; e.tmem.pets = (e.tmem.pets || 0) + 1; } // Buh wird mutiger, je oefter er gestreichelt wird
   if (!pet || pet.muted || e.inTalk || Date.now() - e.pettedAt < 30000) return;
   e.pettedAt = Date.now();
   say(id, pettedLine(pet.species), { mood: 'talk', ms: 3200 });
@@ -456,6 +458,44 @@ function applyTalentAction(pet, action) {
   else if (action === 'cover') send(pet.id, 'pet:mood', { mood: 'cover', ms: 20000 });  // Panda haelt sich die Augen zu
   else if (action === 'stretch') send(pet.id, 'pet:mood', { mood: 'stretch', ms: 4000 }); // Katze streckt sich
   else if (action && action.garden) send(pet.id, 'pet:garden', action.garden);           // Pilz: Garten waechst
+  else if (action === 'nap') setTimeout(() => send(pet.id, 'pet:mood', { mood: 'sleep', ms: 25000 }), 3000); // Katze/Panda: Nickerchen
+}
+
+// Nooks Karteikarten fuer Huhu (nur lesend, hoechstens alle 30 Minuten neu, nur wenn eine Eule mit Nook da ist)
+let cardsCache = { at: 0, cards: [] };
+function nookCards() {
+  if (!state.pets.some((p) => p.species === 'owl' && p.kind === 'nook' && p.talent.enabled)) return [];
+  if (Date.now() - cardsCache.at > 30 * 60000) {
+    cardsCache.at = Date.now();
+    try { cardsCache.cards = loadNookCards(path.join(app.getPath('appData'), 'Nook')); } catch (e) { log('[karteikarten]', e.message); cardsCache.cards = []; }
+  }
+  return cardsCache.cards;
+}
+
+// Buh will jemanden erschrecken: das naechste Pet daneben (sonst dich)
+function ghostScare(ghost) {
+  const [gx, gy] = posOf(ghost.id);
+  let target = null;
+  let best = Infinity;
+  for (const p of state.pets) {
+    const e = live.get(p.id);
+    if (p.id === ghost.id || p.hidden || !e || e.inTalk || e.dragging || e.petting || e.breath) continue;
+    const [x, y] = posOf(p.id);
+    const d = Math.abs(x - gx);
+    if (d < W * 1.2 && Math.abs(y - gy) < 160 && d < best) { best = d; target = p; }
+  }
+  const ge = live.get(ghost.id);
+  if (!target) { say(ghost.id, 'Buh! … Hab ich dich erschreckt? Oh nein. Entschuldigung. 👻', { mood: 'alert', ms: 5000 }); return; }
+  const te = live.get(target.id);
+  ge.inTalk = true; te.inTalk = true;
+  const dir = Math.sign(posOf(target.id)[0] - gx);
+  send(ghost.id, 'pet:face', dir); send(target.id, 'pet:face', -dir);
+  say(ghost.id, 'Buh! 👻', { mood: 'alert', ms: 1800 });
+  setTimeout(() => say(target.id, SCARED[target.species] || 'Aaah! 😱', { mood: target.species === 'panda' ? 'sleep' : 'alert', ms: 3500 }), 1000);
+  setTimeout(() => say(ghost.id, 'Hihi … Entschuldigung! 👻', { mood: 'happy', ms: 3000 }), 4200);
+  setTimeout(() => {
+    for (const id of [ghost.id, target.id]) { const e = live.get(id); if (e) e.inTalk = false; send(id, 'pet:face', 0); }
+  }, 7400);
 }
 
 function talentTick() {
@@ -465,16 +505,24 @@ function talentTick() {
     const place = talentOn(p, 'frog') && p.talent.place;
     if (place && (!weather[place.toLowerCase()] || weather[place.toLowerCase()].day !== today)) fetchWeather(place);
   }
-  const ctx = { now: new Date(), activeMin: (Date.now() - activity.activeSince) / 60000, away: activity.away, backFromBreak: activity.backFromBreak, missed: missed.slice(), done: doneCount, battery, weather };
+  const ctx = { now: new Date(), activeMin: (Date.now() - activity.activeSince) / 60000, away: activity.away, backFromBreak: activity.backFromBreak, missed: missed.slice(), done: doneCount, battery, weather, cards: nookCards() };
   for (const pet of state.pets) {
     const e = live.get(pet.id);
-    if (!e || pet.hidden || allHidden() || e.inTalk || e.dragging || e.petting || e.breath) continue;
-    if (Date.now() < e.busyUntil && pet.species !== 'axolotl') continue;
+    if (!e) continue;
     e.tmem = e.tmem || {};
-    const r = talentDue(pet, e.tmem, ctx);
+    // Info am Namensschild (Begleiter-Modus, Huhu mit Nook) aktuell halten
+    const info = companionInfo(pet, e.tmem, ctx);
+    if (info !== e.lastInfo) { e.lastInfo = info; send(pet.id, 'pet:info', info); }
+    if (pet.hidden || allHidden() || e.inTalk || e.dragging || e.petting || e.breath) continue;
+    if (Date.now() < e.busyUntil && pet.species !== 'axolotl') continue;
+    const r = talentDue(pet, e.tmem, ctx) || companionDue(pet, e.tmem, ctx);
     if (!r) continue;
+    if (r.action === 'scare') { ghostScare(pet); continue; }
     if (r.text) say(pet.id, r.text, { mood: r.mood, ms: r.ms, open: !!(r.open && pet.target) });
+    else if (r.mood) send(pet.id, 'pet:mood', { mood: r.mood, ms: 1600 });
     if (r.action) applyTalentAction(pet, r.action);
+    // Huhus Quiz: die Antwort kommt 10 Sekunden spaeter
+    if (r.quiz) setTimeout(() => { if (live.has(pet.id)) say(pet.id, `Antwort: ${r.quiz.a} 🦉`, { mood: 'happy', ms: Math.min(14000, 5000 + r.quiz.a.length * 45) }); }, 10500);
   }
   doneCount = 0;
   if (activity.backFromBreak) { activity.backFromBreak = 0; missed.length = 0; }
@@ -484,6 +532,7 @@ function talentTick() {
 function noteEventForTalents(ev) {
   const src = { nexus: '3C', 'claude-code': 'Claude Code' }[ev.app] || (APPS[ev.app] && APPS[ev.app].label) || ev.app || 'App';
   if (ev.type === 'task-done') doneCount++;
+  for (const e of live.values()) { e.tmem = e.tmem || {}; e.tmem.events = (e.tmem.events || 0) + 1; } // Piep zaehlt mit
   if (activity.away || powerMonitor.getSystemIdleTime() >= 300) { missed.push({ short: shortEvent(ev, src) }); if (missed.length > 20) missed.shift(); }
 }
 
@@ -498,7 +547,7 @@ function startFocus(pet, phase = 'work') {
   const endsAt = Date.now() + mins * 60000;
   e.timer = { kind: 'focus', phase, endsAt, label: phase === 'work' ? 'Fokus' : 'Pause' };
   e.timer.handle = setTimeout(() => {
-    if (phase === 'work') { say(pet.id, FOCUS_LINES.rest, { mood: 'happy', ms: 12000 }); startFocus(pet, 'rest'); }
+    if (phase === 'work') { e.tmem = e.tmem || {}; e.tmem.focusMin = (e.tmem.focusMin || 0) + FOCUS.work; say(pet.id, FOCUS_LINES.rest, { mood: 'happy', ms: 12000 }); startFocus(pet, 'rest'); }
     else { clearTimer(e); showTimer(pet.id, null); say(pet.id, FOCUS_LINES.again, { mood: 'alert', ms: 12000 }); }
   }, mins * 60000);
   showTimer(pet.id, e.timer);
@@ -532,6 +581,7 @@ async function breathe(pet) {
       send(pet.id, 'pet:mood', { mood: step.mood, ms: step.ms });
       await sleep(step.ms);
     }
+    e.tmem = e.tmem || {}; e.tmem.breaths = (e.tmem.breaths || 0) + 1;
   } finally { e.breath = false; }
 }
 // Rechtsklick-Eintraege je Talent
@@ -931,6 +981,25 @@ async function runSmoke() {
   rebuildAll();
   await sleep(1500);
   report.neuaufbau = [...live].map(([id, e]) => { const b = e.win.getBounds(); return `${b.width}x${b.height}@${b.x},${b.y}=${e.pos.x},${e.pos.y}`; });
+  // Begleiter-Modus und Huhus Quiz: Eule mit Nook, Drache ohne App, Buh erschreckt seinen Nachbarn
+  talking = false;
+  for (const e of live.values()) { e.inTalk = false; e.busyUntil = 0; }
+  const owl = addChosenPet({ kind: 'nook', species: 'owl', name: 'Huhu' });
+  const dragon = addChosenPet({ kind: 'none', species: 'dragon', name: 'Funke' });
+  const buh = state.pets.find((p) => p.species === 'ghost');
+  placeWin(owl.id, a.x + 300, a.y + 520); placeWin(dragon.id, a.x + 470, a.y + 520);
+  cardsCache = { at: Date.now(), cards: [{ q: 'Auf welcher Schicht liegt MQTT?', a: 'Anwendungsschicht', subject: 'LF 9' }] };
+  battery = { level: 0.42, charging: false };
+  await sleep(1500);
+  for (const e of live.values()) e.busyUntil = 0;
+  activity.activeSince = Date.now() - 10 * 60000;
+  talentTick();
+  await sleep(600);
+  const bubble = async (p) => live.get(p.id).win.webContents.executeJavaScript(`document.getElementById('bubble-text').textContent + ' | ' + document.getElementById('name').textContent`);
+  report.begleiter = { huhu: await bubble(owl), funke: await bubble(dragon) };
+  if (buh) { const [bx, by] = posOf(buh.id); placeWin(dragon.id, bx + 170, by); ghostScare(buh); await sleep(1400); report.begleiter.schreck = [await bubble(buh), await bubble(dragon)]; }
+  await sleep(10500);
+  report.begleiter.antwort = await bubble(owl);
   openSettings();
   await sleep(1800);
   const img = await settingsWin.webContents.capturePage();

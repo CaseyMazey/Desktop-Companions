@@ -66,6 +66,26 @@ const TALENTS = {
   robot: { title: 'Fokus-Timer', character: 'logisch, nimmt alles wörtlich, lernt Gefühle', desc: 'Rechtsklick → „Fokus starten“: 25 Minuten Arbeit, 5 Minuten Pause, der Countdown steht über Bip.', options: [] },
 };
 
+// Was das Tier im Begleiter-Modus (ohne App) zusaetzlich macht – steht in den Einstellungen beim Talent
+const COMPANION_DESC = {
+  ghost: 'Versucht ab und zu, die Pets neben sich zu erschrecken (und entschuldigt sich sofort). Info: wie mutig Buh heute ist – Streicheln macht mutig.',
+  cat: 'Mehr Diva-Sprüche, schubst Dinge vom Desktop und hält ab und zu ein Nickerchen. Info: ihre Laune.',
+  blob: 'Überschüttet dich mit guter Laune und hüpft vor Freude. Info: Stimmung SUPER.',
+  bird: 'Bringt „Eilmeldungen“ über deinen Tag (wie lange du schon dran bist, wie viele Meldungen kamen). Info: Meldungen heute.',
+  beau: 'Zaubert öfter, liest den Mond und sieht Pausen in deiner Zukunft. Info: die heutige Mondphase.',
+  fox: 'Schmiedet Pläne und gibt schlaue Arbeitstipps. Info: wie lange noch bis Feierabend.',
+  owl: 'Erzählt ab und zu interessante Fakten – auch mit anderen Apps, dann seltener. Mit Nook verbunden: fragt sie Karteikarten aus Nook ab und sagt 10 Sekunden später die Antwort. Info: Fakten heute bzw. Anzahl der Karten.',
+  frog: 'Mehr Kalauer und Hüpfer. Info: die Temperatur heute (mit Ort).',
+  penguin: 'Gibt öfter ruhige Sätze zum Durchatmen. Info: Atem-Pausen heute.',
+  bunny: 'Sagt nervös die Uhrzeit und hoppelt herum. Info: die aktuelle Uhrzeit.',
+  panda: 'Hält öfter ein Nickerchen und kaut Bambus. Info: Nickerchen heute.',
+  axolotl: 'Lobt dich öfter, einfach so. Info: was du heute geschafft hast.',
+  dragon: 'Gibt öfter Energie-Tipps (Schlaf, Wasser, Pausen, frische Luft). Info: dein Akkustand.',
+  mushroom: 'Sagt öfter stille Naturweisheiten. Info: wie groß dein Garten heute ist.',
+  robot: 'Erzählt Technik-Fakten und lernt Gefühle. Info: Fokus-Minuten heute.',
+};
+for (const [sp, d] of Object.entries(COMPANION_DESC)) if (TALENTS[sp]) TALENTS[sp].companion = d;
+
 // Talent-Einstellungen eines Pets pruefen (unbekannte Optionen weg, fehlende mit Standard)
 function normalizeTalent(species, t) {
   t = t && typeof t === 'object' ? t : {};
@@ -128,7 +148,11 @@ function talentDue(pet, mem, ctx, rnd = Math.random) {
   const now = ctx.now;
   const day = dayOf(now);
   const min = minOfDay(now);
-  if (mem.day !== day) { mem.day = day; mem.count = 0; mem.once = {}; if (pet.species === 'mushroom') mem.garden = 0; }
+  if (mem.day !== day) {
+    mem.day = day; mem.count = 0; mem.once = {};
+    if (pet.species === 'mushroom') mem.garden = 0;
+    Object.assign(mem, { naps: 0, facts: 0, events: 0, focusMin: 0, breaths: 0, pets: 0 }); // Tageszaehler fuer die Info
+  }
   const sinceMin = (k) => (mem[k] ? (now - mem[k]) / 60000 : Infinity);
   const onceToday = (k) => { if (mem.once[k]) return false; mem.once[k] = true; return true; };
   const say = (text, mood = 'talk', extra = {}) => { mem.lastAt = now.getTime(); mem.count++; return { text, mood, ...extra }; };
@@ -220,6 +244,135 @@ function talentDue(pet, mem, ctx, rnd = Math.random) {
   }
 }
 
+// ---------- Begleiter-Modus (2026-11-19): ohne App zeigt jedes Tier seinen Charakter staerker ----------
+// Oefter Sprueche zu seinem Thema, eigene Aktionen und beim Drueberfahren eine Info am Namensschild.
+// Huhu ist die Ausnahme: mit Nook fragt sie Karteikarten ab, sonst (auch mit anderen Apps) erzaehlt sie Fakten.
+const COMPANION = {
+  ghost: ['Ich hab heute schon dreimal „Buh“ geübt. Leise. Damit keiner erschrickt. 👻', 'Entschuldigung, dass ich so durchsichtig bin.', 'Ich bin ein Gespenst. Aber ein nettes. Versprochen.', 'Wenn du mich brauchst … ich schwebe hier. Unauffällig.', 'Ich hab mich vorhin selbst im Spiegel erschreckt. Also … nicht gesehen. Das war das Problem.'],
+  cat: ['Ich ignoriere dich. Nur damit du Bescheid weißt. 😼', '*schubst ein Icon vom Desktop* … Ups.', 'Dein Stuhl wäre ein guter Schlafplatz. Nur so.', 'Ich könnte dir helfen. Aber ich bin beschäftigt. Mit Sein.', 'Streicheln wäre jetzt … akzeptabel.', 'Pff. Arbeiten. Typisch Mensch.'],
+  blob: ['Du bist mein Lieblingsmensch! 💚', 'Heute ist ein SUPER Tag! Ich weiß es einfach!', 'Weißt du, was du kannst? ALLES! Na gut, vieles!', 'Blubb! Ich hab mich gerade so gefreut, dass ich gewabbelt hab!', 'Fun Fact: Lächeln steckt an. Probier’s! 😊', 'Ich bin so stolz auf dich, dass ich platzen könnte! (Keine Sorge, tu ich nicht.)'],
+  bird: ['Eilmeldung: {active}! 📰', 'Neuigkeiten vom Bildschirmrand: Alles ruhig. Verdächtig ruhig. 🐦', 'Breaking News: Du machst das gut. Mehr in Kürze.', 'Exklusiv: Heute schon {events} Meldungen. Ich bleibe dran!', 'Wetter in Pet-Hausen: sonnig mit Aussicht auf Kekse. 🍪', 'Gerücht: Der Mauszeiger soll heute besonders flink sein.'],
+  beau: ['✨ *zaubert ein kleines Funkeln* – für deine Konzentration.', 'Der Mond steht heute als {moon}. Ein guter Tag für kleine Wunder. 🌙', 'Mrrp. Mein Hut sagt, du schaffst das. Mein Hut irrt nie. 🎩', '🔮 Ich sehe … eine Pause in deiner Zukunft. Eine baldige.', 'Abrakadabra … Stress, verschwinde! ✨ Hat’s geklappt?'],
+  fox: ['Psst. Ich hab einen Plan: erst das Wichtigste, dann Feierabend. 🦊', 'Kleiner Trick: Die schwerste Aufgabe zuerst – dann ist der Rest ein Spaziergang.', '{feierabend} Ich zähle mit. 🦊', 'Ich hab die To-do-Liste nicht versteckt. Ehrlich nicht. *schaut weg*', 'Schlau ist, wer Pausen macht, bevor er muss.'],
+  frog: ['Was quakt im Büro? Der Drucker! QUAK! 🐸', 'Warum sind Frösche so glücklich? Sie fressen, was sie stört! 🪰', '*hüpft* Bewegung ist alles! Steh mal kurz auf!', 'Ich bin kein Prinz. Aber küssen musst du mich trotzdem nicht. 🐸', 'Kennst du den? Ein Frosch geht in die Bar … und bestellt eine Fliege. Quak!'],
+  penguin: ['Atme ein. Atme aus. Fertig ist der Tag nicht – aber du bist okay. 🐧', 'Kein Stress. Eis schmilzt auch nicht schneller, wenn man es anschreit.', 'Ganz ruhig. Ein Schritt nach dem anderen. Watschel, watschel.', 'Schultern runter. Kiefer locker. So ist gut.', 'Das Leben ist wie Rutschen: Am besten entspannt.'],
+  bunny: ['Es ist {time}! Schon {time}! Wo ist die Zeit hin?! 🐰', 'Ich hab das Gefühl, wir sind zu spät. Wofür, weiß ich nicht. Aber zu spät!', 'Tick, tack, tick, tack … 🐰⏰', 'Soll ich dir einen Timer stellen? Rechtsklick! Schnell! Bevor es zu spät ist!', 'Ich hoppel mal kurz eine Runde. Zur Beruhigung. 🐰'],
+  panda: ['Mmmh … Nickerchen? Ein kleines? 🐼', '*kaut genüsslich Bambus* … Willst du auch? Nein? Mehr für mich.', 'Kein Stress. Morgen ist auch noch ein Tag. Und übermorgen.', 'Ich hab heute schon viel geschafft. Ich hab gesessen. Sehr gut gesessen.', 'Gemütlichkeit ist eine Kunst. Ich bin Künstler. 🎋'],
+  axolotl: ['Du bist toll! Einfach so! 🩷', 'Weißt du, was ich an dir mag? Alles! 💗', 'Heute schon gelobt worden? Jetzt schon: Du machst das super! 🎉', 'Ich glaub an dich! Ganz doll! 🩷✨', 'Fun Fact: Axolotl können Körperteile nachwachsen lassen. Du kannst neue Kraft tanken – mit einer Pause! 💗'],
+  dragon: ['Denk daran, genug zu schlafen – das hält deine persönliche Energie hoch! 🔥', 'Ein Drache ohne Schlaf spuckt nur Rauch. Geh heute nicht zu spät ins Bett. 🐉', 'Wasser löscht kein Drachenfeuer – aber es füllt deine Energie auf. Trink was! 💧', 'Mein Akku-Blick sagt: {battery}. Und deiner? Kurze Pause? ⚡', 'Kleine Pausen sind wie Holz fürs Feuer. Leg nach! 🔥', 'Frische Luft weckt das Feuer! Fenster auf, einmal tief durchatmen. 🐉', 'Energie-Tipp vom Hüter: Ein Snack mit Nüssen statt Zucker. Hält länger! 🔥'],
+  mushroom: ['… Alles wächst. Auch du. 🌱', '… Im Wald ist niemand in Eile. Und trotzdem wird alles fertig.', '… Wurzeln brauchen Zeit. Gute Dinge auch.', '… Schau mal raus. Ist da was Grünes?', '… Regen ist kein schlechtes Wetter. Nur Wachswetter. 🍄'],
+  robot: ['BIP. FAKT: DER ERSTE COMPUTER-„BUG“ WAR EINE ECHTE MOTTE. 1947. 🤖', 'BIP BOP. ICH LERNE GEFÜHLE. HEUTE: „GEMÜTLICH“. FORTSCHRITT: 37 %.', 'SYSTEMCHECK: MENSCH FUNKTIONIERT. EMPFEHLUNG: WASSER. 💧', 'BIP. FRAGE: WARUM SAGEN MENSCHEN „GLEICH“, WENN SIE „SPÄTER“ MEINEN?', 'FOKUS-STATISTIK HEUTE: {focus} MINUTEN. BIP. STOLZ.EXE GESTARTET.'],
+  owl: [], // Huhu: Fakten (unten) bzw. Quiz mit Nook
+};
+const FACTS = [
+  'Wusstest du? Ein Tag auf der Venus dauert länger als ein Jahr auf der Venus. 🦉',
+  'Fürwahr: Honig verdirbt nicht. In ägyptischen Gräbern fand man 3000 Jahre alten, noch essbaren Honig.',
+  'Interessant: Kraken haben drei Herzen und blaues Blut.',
+  'Wusstest du? Das Wort „Computer“ bezeichnete früher Menschen, die beruflich rechneten.',
+  'Ein Blitz ist etwa fünfmal heißer als die Oberfläche der Sonne. ⚡',
+  'Bananen sind botanisch Beeren – Erdbeeren dagegen nicht. 🍌',
+  'Eulen können ihren Kopf um etwa 270 Grad drehen. Ich übe noch. 🦉',
+  'Die erste E-Mail wurde 1971 verschickt. Ihr Inhalt war vermutlich „QWERTYUIOP“.',
+  'Wusstest du? Faultiere können die Luft länger anhalten als Delfine – bis zu 40 Minuten.',
+  'Es gibt mehr mögliche Schachpartien als Atome im beobachtbaren Universum. ♟️',
+  'Schnecken können bis zu drei Jahre schlafen. Beneidenswert.',
+  'Die Eiffelturm-Spitze ist im Sommer bis zu 15 cm höher – Metall dehnt sich bei Wärme aus.',
+  'Wusstest du? Das Gehirn verbraucht etwa 20 % deiner Energie – Pausen sind also Wartung! 🧠',
+  'Wombats machen würfelförmige Häufchen. Die Natur ist erstaunlich. Und seltsam.',
+  'Licht von der Sonne braucht etwa 8 Minuten bis zur Erde. Du siehst die Sonne also immer in der Vergangenheit.',
+  'Wer etwas laut erklärt, behält es besser. Das nennt man den Protégé-Effekt. 📖',
+  'Das Passwort „123456“ ist seit Jahren eines der häufigsten der Welt. Bitte nicht verwenden. 🔐',
+  'Wusstest du? Tintenfische können ihre Farbe ändern, obwohl sie selbst farbenblind sind.',
+  'Der kürzeste Krieg der Geschichte dauerte etwa 38 Minuten (England gegen Sansibar, 1896).',
+  'Wenn man lernt und danach schläft, sortiert das Gehirn das Gelernte im Schlaf neu. Fürwahr praktisch. 🌙',
+];
+// Reaktionen der anderen, wenn Buh sie erschrecken will (je Tierart)
+const SCARED = {
+  cat: 'Pff. Netter Versuch. 😼', blob: 'AAAH! … Hihi, nochmal! 💚', bird: 'EILMELDUNG! GEIST GESICHTET! 😱', beau: 'Mrrp. Ich bin ein Zauberer. Mich erschreckt nichts. … Fast nichts.',
+  fox: 'Haha, den Trick kenn ich! 🦊', owl: 'Huhu! … Interessant. Mein Puls ist gestiegen.', frog: 'QUAAAK! *springt meterhoch* 🐸', penguin: '… Nein. 🐧',
+  bunny: 'AAAAAH! 🐰💨', panda: '… *schläft weiter* 💤', axolotl: 'Oh! Du bist so süß, wenn du gruselig sein willst! 🩷', dragon: 'ICH FÜRCHTE MICH NICHT! … *versteckt sich hinter dem Schwanz*',
+  mushroom: '… Oh. Ein Gespenst. … Hallo.', robot: 'BIP?! SCHRECK.EXE WIRD AUSGEFÜHRT. 🤖', ghost: 'AAAH! … Ach, du bist’s. Entschuldigung! 👻',
+};
+const MOONS = ['Neumond 🌑', 'zunehmende Sichel 🌒', 'Halbmond 🌓', 'zunehmender Mond 🌔', 'Vollmond 🌕', 'abnehmender Mond 🌖', 'Halbmond 🌗', 'abnehmende Sichel 🌘'];
+const moonOf = (d) => { const days = (d - Date.UTC(2000, 0, 6, 18, 14)) / 86400000; return MOONS[Math.floor((((days % 29.53) + 29.53) % 29.53) / 29.53 * 8 + 0.5) % 8]; };
+const companionMode = (pet) => pet.kind === 'none';
+
+// Platzhalter in Begleiter-Spruechen fuellen
+function fillCompanion(text, pet, mem, ctx) {
+  const end = pet.talent && pet.talent.endTime ? minutesOf(pet.talent.endTime) : 17 * 60;
+  const left = end - minOfDay(ctx.now);
+  const b = ctx.battery;
+  return text
+    .replaceAll('{time}', `${ctx.now.getHours()}:${String(ctx.now.getMinutes()).padStart(2, '0')}`)
+    .replaceAll('{active}', ctx.activeMin >= 60 ? `Du bist seit ${Math.floor(ctx.activeMin / 60)} Std. ${Math.round(ctx.activeMin % 60)} Min. am Rechner` : 'Unser Mensch ist frisch dabei')
+    .replaceAll('{events}', String(mem.events || 0))
+    .replaceAll('{moon}', moonOf(ctx.now))
+    .replaceAll('{feierabend}', !workday(ctx.now) ? 'Heute ist Wochenende – Feierabend den ganzen Tag!' : left > 0 ? `Noch ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')} bis Feierabend.` : 'Feierabend war schon!')
+    .replaceAll('{battery}', b && typeof b.level === 'number' ? `${Math.round(b.level * 100)} %${b.charging ? ' und lädt' : ''}` : 'Steckdose, alles gut')
+    .replaceAll('{focus}', String(mem.focusMin || 0));
+}
+
+// Begleiter-Spruch, Fakt, Quiz oder Aktion faellig? (zusaetzlich zum Talent; nur wenn jemand da ist)
+// Rueckgabe wie talentDue, dazu evtl. { quiz: { q, a } } oder action 'scare' | 'nap' | 'hop'
+function companionDue(pet, mem, ctx, rnd = Math.random) {
+  if (pet.muted || ctx.away || !(pet.talent && pet.talent.enabled)) return null;
+  const now = ctx.now;
+  const min = minOfDay(now);
+  if (min < 8 * 60 || min >= 22 * 60) return null;
+  const sinceMin = mem.compAt ? (now - mem.compAt) / 60000 : Infinity;
+  // Huhu: mit Nook Quiz (alle ~35 Min), sonst Fakten (Begleiter alle ~30, mit anderer App alle ~90 Min)
+  if (pet.species === 'owl') {
+    const cards = pet.kind === 'nook' ? ctx.cards || [] : [];
+    const every = cards.length ? 35 : companionMode(pet) ? 30 : 90;
+    if (sinceMin < (mem.compGap || every) || ctx.activeMin < 3) return null;
+    mem.compAt = now.getTime(); mem.compGap = every * (0.8 + rnd() * 0.4);
+    if (cards.length) { const c = cards[Math.floor(rnd() * cards.length)]; return { text: `Huhu! Quizfrage${c.subject ? ` (${c.subject})` : ''}: ${c.q} 🦉`, mood: 'talk', ms: 10000, quiz: c }; }
+    mem.facts = (mem.facts || 0) + 1;
+    return { text: pick(FACTS, rnd), mood: 'talk', ms: 9000 };
+  }
+  if (!companionMode(pet)) return null;
+  if (sinceMin < (mem.compGap || 25) || ctx.activeMin < 3) return null;
+  mem.compAt = now.getTime(); mem.compGap = 20 + rnd() * 15; // alle 20–35 Minuten
+  const r = rnd();
+  if (pet.species === 'ghost' && r < 0.35) return { action: 'scare' };
+  if ((pet.species === 'cat' || pet.species === 'panda') && r < 0.3) { mem.naps = (mem.naps || 0) + 1; return { text: pet.species === 'cat' ? '*rollt sich zusammen* Nicht stören. 😼💤' : 'Mmmh … nur fünf Minuten … 🐼💤', mood: 'sleep', ms: 4000, action: 'nap' }; }
+  if ((pet.species === 'bunny' || pet.species === 'frog' || pet.species === 'blob') && r < 0.3) return { text: '', mood: 'happy', action: 'hop' };
+  const list = COMPANION[pet.species];
+  if (!list || !list.length) return null;
+  return { text: fillCompanion(pick(list, rnd), pet, mem, ctx), mood: pet.species === 'beau' ? 'greet' : 'talk', ms: 8000 };
+}
+
+// Info am Namensschild beim Drueberfahren (nur Begleiter-Modus; Huhu mit Nook zeigt die Kartenzahl)
+function companionInfo(pet, mem, ctx) {
+  if (!(pet.talent && pet.talent.enabled)) return '';
+  if (pet.species === 'owl' && pet.kind === 'nook') {
+    const n = ctx.cards ? ctx.cards.length : 0;
+    return n ? `🗂️ ${n} ${n === 1 ? 'Karteikarte' : 'Karteikarten'}` : '🗂️ keine Karten gefunden';
+  }
+  if (!companionMode(pet)) return '';
+  const b = ctx.battery;
+  const w = pet.talent.place && ctx.weather && ctx.weather[pet.talent.place.toLowerCase()];
+  const hh = `${ctx.now.getHours()}:${String(ctx.now.getMinutes()).padStart(2, '0')}`;
+  switch (pet.species) {
+    case 'ghost': return `👻 Mut: ${Math.min(100, 3 + (mem.pets || 0) * 7)} %`;
+    case 'cat': return `😼 Laune: ${['verschlafen', 'gnädig', 'königlich', 'huldvoll', 'unbeeindruckt'][ctx.now.getHours() % 5]}`;
+    case 'blob': return '💚 Stimmung: SUPER';
+    case 'bird': return `📰 ${mem.events || 0} Meldungen heute`;
+    case 'beau': return `🌙 ${moonOf(ctx.now)}`;
+    case 'fox': return `⏳ ${fillCompanion('{feierabend}', pet, mem, ctx).replace(/^Noch /, 'noch ')}`;
+    case 'owl': return `📚 ${mem.facts || 0} Fakten heute`;
+    case 'frog': return w && !w.missing ? `🌡️ ${Math.round(w.min)}–${Math.round(w.max)} °C` : '🐸 Quak! (Ort in den Einstellungen)';
+    case 'penguin': return `🫧 Atem-Pausen heute: ${mem.breaths || 0}`;
+    case 'bunny': return `⏰ ${hh}`;
+    case 'panda': return `💤 Nickerchen heute: ${mem.naps || 0}`;
+    case 'axolotl': return `🎉 heute geschafft: ${mem.winsDay === dayOf(ctx.now) ? mem.wins || 0 : 0}`;
+    case 'dragon': return b && typeof b.level === 'number' ? `🔋 ${Math.round(b.level * 100)} %${b.charging ? ' ⚡' : ''}` : '🔌 kein Akku – volle Energie';
+    case 'mushroom': return `🌱 Garten: ${mem.garden || 0} ${mem.garden === 1 ? 'Pflanze' : 'Pflanzen'}`;
+    case 'robot': return `🎯 Fokus heute: ${mem.focusMin || 0} Min`;
+    default: return '';
+  }
+}
+
 // Kurzform einer Meldung fuer den Boten ("✅ 3C fertig (Pets)")
 function shortEvent(ev, src) {
   const where = ev.project ? ` (${ev.project})` : '';
@@ -244,4 +397,4 @@ const FOCUS_LINES = {
 };
 const TIMER_LINES = { set: (m) => `Okay! In ${m} Minuten sag ich Bescheid! Versprochen! ⏰🐰`, done: (m) => `ZEIT IST UM! ${m} Minuten sind vorbei! ⏰🐰` };
 
-module.exports = { TALENTS, LINES, normalizeTalent, talentDue, weatherLine, shortEvent, BREATH, FOCUS, FOCUS_LINES, TIMER_LINES, hhmm, weekOf };
+module.exports = { COMPANION, FACTS, SCARED, companionDue, companionInfo, companionMode, moonOf, TALENTS, LINES, normalizeTalent, talentDue, weatherLine, shortEvent, BREATH, FOCUS, FOCUS_LINES, TIMER_LINES, hhmm, weekOf };

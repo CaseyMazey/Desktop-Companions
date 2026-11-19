@@ -194,7 +194,7 @@ const APPS = {
     group: 'other', icon: '🐾',
     eventsLabel: 'Meldungen anzeigen',
     target: () => '',
-    hint: 'Einfach ein Pet, das dir Gesellschaft leistet.',
+    hint: 'Ein reiner Begleiter: Ohne App zeigt das Tier seinen Charakter stärker – mehr Sprüche zu seinem Thema, eigene Aktionen und eine Info am Namensschild.',
     reminders: { enabled: false, intervalMin: 60, onlyWorkdays: false, from: '08:00', to: '20:00', messages: ['Hallo! 👋'], timed: [] },
     events: false,
   },

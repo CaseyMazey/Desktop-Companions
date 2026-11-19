@@ -198,6 +198,10 @@ function renderTalent(species, t = {}) {
   $('t-title').textContent = info.title;
   $('t-character').textContent = `· ${info.character}`;
   $('t-desc').textContent = info.desc;
+  // Begleiter-Modus: was das Tier ohne App zusaetzlich macht (Huhu: Quiz mit Nook)
+  const kind = $('f-kind') ? $('f-kind').value : '';
+  const comp = info.companion || '';
+  $('t-companion').textContent = comp ? `${kind === 'none' ? '✨ Als Begleiter (ohne App, gerade aktiv)' : '✨ Als Begleiter (ohne App)'}: ${comp}` : '';
   $('t-enabled').checked = t.enabled !== false;
   const opts = $('t-options');
   opts.replaceChildren();
