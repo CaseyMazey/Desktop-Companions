@@ -20,6 +20,6 @@ async function shoot(page, file, width, height) {
 app.on('window-all-closed', () => { /* zwischen den Bildern nicht beenden */ });
 app.whenReady().then(async () => {
   await shoot('showcase.html', 'pets.png', 1100, 360);
-  await shoot('allpets.html', 'all-pets.png', 1000, 680);
+  await shoot('allpets.html', 'all-pets.png', 1000, 705);
   app.exit(0);
 });

@@ -6,11 +6,11 @@ const fs = require('node:fs');
 const os = require('node:os');
 const http = require('node:http');
 const { APPS, SPECIES, BEAU, GROUPS } = require('./presets');
-const { createPet, createChosenPet, petsForEvent, normalizePet, normalizeState, dueReminder, pickMessage, neighborGroups, strollTarget, chatterDelay, freeSpot, KINDS } = require('./logic');
+const { dueShared, takePresetTimed, createPet, createChosenPet, petsForEvent, normalizePet, normalizeState, dueReminder, pickMessage, neighborGroups, strollTarget, chatterDelay, freeSpot, KINDS } = require('./logic');
 const { pickScene, pettedLine } = require('./dialogues');
 const { startBridge, PORT } = require('./bridge');
 const { settingsFile, hookJson, hasHook, installHook } = require('./claudehook');
-const { lockLine, lottiPraise, weatherLook, TALENTS, LINES, moonOf, talentDue, companionDue, companionInfo, SCARED, shortEvent, BREATH, FOCUS, FOCUS_LINES, TIMER_LINES } = require('./talents');
+const { COMPANION, FACTS, lockLine, lottiPraise, weatherLook, TALENTS, LINES, moonOf, talentDue, companionDue, companionInfo, SCARED, shortEvent, BREATH, FOCUS, FOCUS_LINES, TIMER_LINES } = require('./talents');
 const { loadNookCards } = require('./nookcards');
 const { startWatch } = require('./watch-win');
 const { Updater } = require('./updater');
@@ -408,7 +408,16 @@ function checkReminders() {
     e.mem.pending = null;
     say(pet.id, text, { mood: 'alert', open: !!pet.target, ms: 12000 });
   }
+  // Gemeinsame feste Uhrzeiten (Einstellungen, z. B. 12:30 Mittagspause): das gewaehlte Pet sagt es,
+  // sonst (oder wenn es schlaeft/ausgeblendet ist) das erste sichtbare, wache Pet
+  for (const t of dueShared(state.settings.timed, sharedMem, now)) {
+    const ok = (p) => p && !p.hidden && !p.muted && live.has(p.id) && !hiddenByFullscreen(p.id);
+    const p = ok(petById(t.pet)) ? petById(t.pet) : state.pets.find(ok);
+    if (!p || allHidden()) continue;
+    say(p.id, t.text, { mood: 'alert', open: !!p.target, ms: 12000 });
+  }
 }
+const sharedMem = {};
 
 // ---------- Meldungen anderer Apps ----------
 function onAppEvent(ev) {
@@ -729,15 +738,21 @@ function ghostScare(ghost) {
   }, 7400);
 }
 
+let lastChatterAt = 0; // wann sich zuletzt ein Pet von selbst gemeldet hat
 function talentTick() {
   sampleActivity();
   const today = new Date().toDateString();
   for (const p of state.pets) {
-    const place = (talentOn(p, 'frog') || talentOn(p, 'mushroom')) && p.talent.place;
+    const place = talentOn(p, 'mushroom') && p.talent.place; // Wetter nur noch fuer Pilzi (Wetter-Pilz)
     if (place && (!weather[place.toLowerCase()] || weather[place.toLowerCase()].day !== today)) fetchWeather(place);
   }
   const ctx = { now: new Date(), activeMin: (Date.now() - activity.activeSince) / 60000, away: activity.away, backFromBreak: activity.backFromBreak, missed: missed.slice(), done: doneCount, battery, weather, cards: nookCards(), sys: state.pets.some((p) => p.species === 'robot' && isCompanion(p)) ? systemStats() : null };
-  for (const pet of state.pets) {
+  // Nicht alle auf einmal: pro Takt meldet sich hoechstens EIN Pet von selbst (in zufaelliger Reihenfolge),
+  // Begleiter-Sprueche zusaetzlich mit mindestens 2 Minuten Abstand. Meldungen von Apps und Reaktionen
+  // (Streicheln, Klicks, Erschrecken) sind davon nicht betroffen.
+  let spoke = false;
+  const chatterOk = Date.now() - lastChatterAt >= 2 * 60000;
+  for (const pet of [...state.pets].sort(() => Math.random() - 0.5)) {
     const e = live.get(pet.id);
     if (!e) continue;
     e.tmem = e.tmem || {};
@@ -750,10 +765,12 @@ function talentTick() {
     }
     const info = companionInfo(pet, e.tmem, ctx);
     if (info !== e.lastInfo) { e.lastInfo = info; send(pet.id, 'pet:info', info); }
-    if (pet.hidden || allHidden() || e.inTalk || e.dragging || e.petting || e.breath) continue;
+    if (spoke || pet.hidden || allHidden() || e.inTalk || e.dragging || e.petting || e.breath) continue;
     if (Date.now() < e.busyUntil && pet.species !== 'axolotl') continue;
-    const r = talentDue(pet, e.tmem, ctx) || companionDue(pet, e.tmem, ctx);
+    const r = talentDue(pet, e.tmem, ctx) || (chatterOk ? companionDue(pet, e.tmem, ctx) : null);
     if (!r) continue;
+    spoke = true;
+    lastChatterAt = Date.now();
     if (r.action === 'scare') { ghostScare(pet); continue; }
     if (r.text) say(pet.id, r.text, { mood: r.mood, ms: r.ms, open: !!(r.open && pet.target) });
     else if (r.mood) send(pet.id, 'pet:mood', { mood: r.mood, ms: 1600 });
@@ -913,6 +930,7 @@ function addChosenPet({ kind, species, name } = {}) {
   return placeNewPet(pet);
 }
 function placeNewPet(pet) {
+  takePresetTimed(pet, state); // voreingestellte Uhrzeiten (z. B. DAN 15:45) -> gemeinsame Uhrzeiten in den Einstellungen
   state.pets.push(pet);
   createPetWindow(pet);
   save();
@@ -941,7 +959,7 @@ function openSettings(focusId, { create = false } = {}) {
   }
   settingsWin = new BrowserWindow({
     width: 940, height: 680, minWidth: 720, minHeight: 500, title: 'Desktop Companions – Einstellungen', icon, autoHideMenuBar: true, show: false,
-    backgroundColor: '#1d1b26',
+    backgroundColor: state.settings.theme === 'light' ? '#f6f4fb' : '#1d1b26', // passend zu Hell/Dunkel, kein Aufblitzen
     webPreferences: { preload: path.join(__dirname, 'settings', 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true },
   });
   settingsWin.loadFile(path.join(__dirname, 'settings', 'settings.html'), { query: { ...(focusId ? { focus: focusId } : {}), ...(create ? { create: '1' } : {}) } });
@@ -959,6 +977,8 @@ function settingsPayload() {
     species: Object.fromEntries(Object.entries(SPECIES).map(([k, v]) => [k, v.label])),
     speciesColors: Object.fromEntries(Object.entries(SPECIES).map(([k, v]) => [k, v.color])),
     talents: TALENTS,
+    // eine typische Zeile je Tier fuer den Steckbrief (so klingt es)
+    samples: Object.fromEntries(Object.keys(SPECIES).map((sp) => [sp, sp === 'owl' ? FACTS[0] : (COMPANION[sp] || [])[0] || ''])),
     port: PORT,
     packaged: app.isPackaged,
     version: app.getVersion(),
@@ -1004,6 +1024,7 @@ ipcMain.handle('settings:save-global', (_e, g) => {
   state = normalizeState({ ...state, settings: { ...state.settings, ...g } });
   applyAutostart();
   save();
+  sendSettings(); // z. B. Hell/Dunkel sofort im Fenster
   return state.settings;
 });
 ipcMain.handle('settings:pick-file', async () => {

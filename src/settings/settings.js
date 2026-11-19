@@ -4,6 +4,7 @@ const api = window.pets;
 const $ = (id) => document.getElementById(id);
 let data = null;       // { state, apps, species, port, packaged }
 let current = null;    // id des gewaehlten Pets
+let view = 'pet';      // 'pet' (Steckbrief eines Pets) oder 'settings' (Einstellungen fuer alle)
 let saveTimer = null;
 
 
@@ -26,7 +27,7 @@ function renderList() {
   ul.replaceChildren();
   for (const p of data.state.pets) {
     const li = document.createElement('li');
-    li.className = p.id === current ? 'active' : '';
+    li.className = view === 'pet' && p.id === current ? 'active' : '';
     li.tabIndex = 0;
     const mini = document.createElement('div');
     mini.className = 'mini';
@@ -56,11 +57,13 @@ function renderList() {
     li.onkeydown = (e) => { if (e.key === 'Enter') select(p.id); };
     ul.appendChild(li);
   }
-  $('chat-now').disabled = data.state.pets.length < 2;
+  $('nav-settings').classList.toggle('active', view === 'settings');
+  $('side-version').textContent = `Version ${data.version}`;
 }
 
 function select(id) {
   current = id;
+  view = 'pet';
   renderList();
   renderEditor();
 }
@@ -69,6 +72,7 @@ const pet = () => data.state.pets.find((p) => p.id === current);
 
 function renderEditor() {
   const main = $('editor');
+  if (view === 'settings') { renderSettings(); return; }
   const p = pet();
   if (!p) { main.innerHTML = '<p class="empty">Wähle links ein Pet aus oder leg ein neues an.</p>'; return; }
   main.replaceChildren($('tpl-editor').content.cloneNode(true));
@@ -95,10 +99,11 @@ function renderEditor() {
   $('r-to').value = r.to;
   $('r-workdays').checked = r.onlyWorkdays;
   $('r-messages').value = r.messages.join('\n');
-  $('r-timed').value = r.timed.map((t) => `${t.time} ${t.text}`).join('\n');
   drawPet($('preview'), p);
   $('f-color').closest('label').hidden = p.species === 'beau'; // Beau: Fell und Hut sind fest
   renderTalent(p.species, p.talent);
+  renderProfile(p);
+  $('go-settings').onclick = (ev) => { ev.preventDefault(); openSettingsView(); };
 
   main.querySelectorAll('input, select, textarea').forEach((el) => {
     if (el.id === 'f-kind') return;
@@ -116,10 +121,6 @@ function renderEditor() {
 }
 
 function collect() {
-  const timed = $('r-timed').value.split('\n').map((l) => l.trim()).filter(Boolean).map((l) => {
-    const m = l.match(/^(\d{1,2}):(\d{2})\s+(.+)$/);
-    return m ? { time: `${m[1].padStart(2, '0')}:${m[2]}`, text: m[3] } : null;
-  }).filter(Boolean);
   return {
     id: current,
     name: $('f-name').value,
@@ -139,7 +140,7 @@ function collect() {
       to: $('r-to').value,
       onlyWorkdays: $('r-workdays').checked,
       messages: $('r-messages').value.split('\n').map((s) => s.trim()).filter(Boolean),
-      timed,
+      timed: [], // feste Uhrzeiten gelten jetzt fuer alle (Einstellungen)
     },
   };
 }
@@ -152,6 +153,7 @@ function scheduleSave() {
     if (sp.dataset.last && sp.dataset.last !== sp.value) {
       if (data.speciesColors) $('f-color').value = data.speciesColors[sp.value] || $('f-color').value;
       renderTalent(sp.value, {}); // anderes Tier = anderes Talent (mit Standardwerten)
+      renderProfile({ ...p, species: sp.value, kind: $('f-kind').value });
     }
     sp.dataset.last = sp.value;
     const c = collect();
@@ -196,12 +198,16 @@ function renderTalent(species, t = {}) {
   if (!info) return;
   box.dataset.species = species;
   $('t-title').textContent = info.title;
-  $('t-character').textContent = `· ${info.character}`;
+  $('p-character').textContent = info.character;
   $('t-desc').textContent = info.desc;
   // Begleiter-Modus: was das Tier ohne App zusaetzlich macht (Huhu: Quiz mit Nook)
   const kind = $('f-kind') ? $('f-kind').value : '';
   const comp = info.companion || '';
-  $('t-companion').textContent = comp ? `${kind === 'none' ? '✨ Als Begleiter (ohne App, gerade aktiv)' : '✨ Als Begleiter (ohne App)'}: ${comp}` : '';
+  $('t-companion').textContent = comp;
+  $('p-comp').hidden = !comp;
+  $('p-comp-state').textContent = kind === 'none' ? 'aktiv' : 'ohne App';
+  $('p-comp-state').className = `pill${kind === 'none' ? ' on' : ''}`;
+  $('p-comp').classList.toggle('on', kind === 'none');
   $('t-enabled').checked = t.enabled !== false;
   const opts = $('t-options');
   opts.replaceChildren();
@@ -299,6 +305,8 @@ function renderAnimals() {
     art.className = 'art';
     drawPet(art, { species: sp, color: data.speciesColors[sp] });
     b.prepend(art);
+    // Beau: Special-Charakter aus Caseys Spiel Storybound
+    if (sp === 'beau') { b.classList.add('special'); const s = document.createElement('small'); s.className = 'special-badge'; s.textContent = '✨ aus Storybound'; b.appendChild(s); }
     box.appendChild(b);
   }
 }
@@ -357,8 +365,110 @@ function initCreate() {
   };
 }
 
+// ---------- Steckbrief: wer ist das Pet, was kann es, was macht es besonders ----------
+function renderProfile(p) {
+  const animal = (data.species[p.species] || '').replace(/^(.*?)\s*\((.*)\)$/, '$2');
+  const app = p.kind === 'none' ? 'ohne App – reiner Begleiter' : `verbunden mit ${data.apps[p.kind] ? data.apps[p.kind].label : p.kind}`;
+  $('p-sub').textContent = `${animal} · ${app}`;
+  const q = (data.samples || {})[p.species] || '';
+  $('p-quote').textContent = q ? `„${q.replace(/^[„"]|[“"]$/g, '')}“` : '';
+  $('p-quote').hidden = !q;
+  $('p-special').hidden = p.species !== 'beau'; // Beau: Special-Charakter aus Storybound
+}
+
+// ---------- Einstellungen fuer alle Pets (Darstellung, feste Uhrzeiten, Gespraeche, Start, Updates) ----------
+function openSettingsView() {
+  view = 'settings';
+  renderList();
+  renderEditor();
+}
+function renderSettings() {
+  const main = $('editor');
+  main.replaceChildren($('tpl-settings').content.cloneNode(true));
+  const g = data.state.settings;
+  // Darstellung
+  for (const b of main.querySelectorAll('#g-theme button')) {
+    b.setAttribute('aria-checked', String(b.dataset.value === g.theme));
+    b.onclick = () => setTheme(b.dataset.value);
+  }
+  // Gespraeche, Start
+  $('chatter').value = g.chatter;
+  $('chatter').onchange = () => api.saveGlobal({ chatter: $('chatter').value });
+  $('chat-now').disabled = data.state.pets.length < 2;
+  $('chat-now').onclick = async () => {
+    const ok = await api.chatNow();
+    if (!ok) window.alert('Stell zwei Pets nebeneinander (höchstens etwa eine Pet-Breite Abstand), dann plaudern sie.');
+  };
+  $('autostart-row').hidden = !data.packaged;
+  $('autostart').checked = g.autostart;
+  $('autostart').onchange = () => api.saveGlobal({ autostart: $('autostart').checked });
+  // Updates
+  $('auto-update').checked = g.autoUpdate;
+  $('auto-update').disabled = !data.packaged;
+  $('auto-update').onchange = () => api.saveGlobal({ autoUpdate: $('auto-update').checked });
+  $('update-btn').onclick = () => {
+    const st = (data.update || {}).status;
+    if (st === 'ready' || st === 'available') api.updateInstall(); else api.updateCheck();
+  };
+  renderUpdate();
+  // feste Uhrzeiten
+  renderTimed(g.timed);
+  $('g-timed-add').onclick = () => { renderTimed([...collectTimed(), { time: '12:00', text: '', pet: '' }]); $('g-timed').querySelector('.timed-row:last-child input[type=text]').focus(); };
+}
+function renderTimed(list) {
+  const box = $('g-timed');
+  box.replaceChildren();
+  if (!list.length) { const e = document.createElement('p'); e.className = 'hint'; e.textContent = 'Noch keine festen Uhrzeiten.'; box.appendChild(e); }
+  for (const t of list) {
+    const row = document.createElement('div');
+    row.className = 'timed-row';
+    const time = document.createElement('input'); time.type = 'time'; time.value = t.time; time.setAttribute('aria-label', 'Uhrzeit');
+    const text = document.createElement('input'); text.type = 'text'; text.value = t.text; text.maxLength = 200; text.placeholder = 'z. B. Mittagspause! 🍜 Weg vom Bildschirm.'; text.setAttribute('aria-label', 'Was das Pet sagt');
+    const who = document.createElement('select'); who.setAttribute('aria-label', 'Welches Pet sagt es');
+    who.add(new window.Option('irgendein Pet', ''));
+    for (const p of data.state.pets) who.add(new window.Option(p.name, p.id));
+    who.value = t.pet || '';
+    const del = document.createElement('button'); del.type = 'button'; del.className = 'icon-btn'; del.textContent = '✕'; del.title = 'Entfernen'; del.setAttribute('aria-label', 'Uhrzeit entfernen');
+    del.onclick = () => { row.remove(); saveTimed(); };
+    for (const el of [time, text, who]) { el.addEventListener('change', saveTimed); el.addEventListener('input', saveTimedSoon); }
+    row.append(time, text, who, del);
+    box.appendChild(row);
+  }
+}
+const collectTimed = () => [...$('g-timed').querySelectorAll('.timed-row')].map((r) => {
+  const [time, text, who] = r.querySelectorAll('input, select');
+  return { time: time.value, text: text.value.trim(), pet: who.value };
+});
+let timedTimer = null;
+function saveTimedSoon() { clearTimeout(timedTimer); timedTimer = setTimeout(saveTimed, 600); }
+async function saveTimed() {
+  clearTimeout(timedTimer);
+  const saved = await api.saveGlobal({ timed: collectTimed().filter((t) => t.time && t.text) });
+  if (saved) data.state.settings = saved;
+}
+
+// ---------- Hell / Dunkel ----------
+const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+function applyTheme() {
+  const t = (data && data.state.settings.theme) || 'dark';
+  const actual = t === 'system' ? (prefersDark.matches ? 'dark' : 'light') : t;
+  document.documentElement.dataset.theme = actual;
+  const btn = $('theme-toggle');
+  btn.textContent = actual === 'dark' ? '☀️' : '🌙';
+  btn.title = actual === 'dark' ? 'Auf Hell umschalten' : 'Auf Dunkel umschalten';
+}
+async function setTheme(t) {
+  data.state.settings.theme = t;
+  applyTheme();
+  for (const b of document.querySelectorAll('#g-theme button')) b.setAttribute('aria-checked', String(b.dataset.value === t));
+  const saved = await api.saveGlobal({ theme: t });
+  if (saved) data.state.settings = saved;
+}
+prefersDark.addEventListener('change', applyTheme);
+
 // ---------- Updates ----------
 function renderUpdate() {
+  if (!$('version')) return; // nur auf der Einstellungsseite
   const u = data.update || { status: 'off' };
   $('version').textContent = `Version ${data.version}`;
   const text = {
@@ -378,27 +488,13 @@ function renderUpdate() {
 
 async function init() {
   data = await api.get();
+  applyTheme();
   const q = new URLSearchParams(window.location.search).get('focus');
   current = q || (data.state.pets[0] && data.state.pets[0].id) || null;
-  $('chatter').value = data.state.settings.chatter;
-  $('autostart').checked = data.state.settings.autostart;
-  $('autostart-row').hidden = !data.packaged;
-  $('chatter').onchange = () => api.saveGlobal({ chatter: $('chatter').value });
-  $('autostart').onchange = () => api.saveGlobal({ autostart: $('autostart').checked });
-  $('chat-now').onclick = async () => {
-    const ok = await api.chatNow();
-    if (!ok) window.alert('Stell zwei Pets nebeneinander (höchstens etwa eine Pet-Breite Abstand), dann plaudern sie.');
-  };
   initCreate();
   $('add').onclick = openCreate;
-  $('auto-update').checked = data.state.settings.autoUpdate;
-  $('auto-update').disabled = !data.packaged;
-  $('auto-update').onchange = () => api.saveGlobal({ autoUpdate: $('auto-update').checked });
-  $('update-btn').onclick = () => {
-    const s = (data.update || {}).status;
-    if (s === 'ready' || s === 'available') api.updateInstall(); else api.updateCheck();
-  };
-  renderUpdate();
+  $('nav-settings').onclick = openSettingsView;
+  $('theme-toggle').onclick = () => setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
   renderList();
   renderEditor();
   if (new URLSearchParams(window.location.search).get('create')) openCreate(); // Tray: "Neues Pet …"
@@ -406,9 +502,11 @@ async function init() {
 
 api.onState((s) => {
   data = s;
-  renderUpdate();
+  applyTheme();
   if (!pet()) current = data.state.pets[0] ? data.state.pets[0].id : null;
   renderList();
+  // Einstellungsseite: nicht neu aufbauen, waehrend man gerade eine Uhrzeit tippt
+  if (view === 'settings' && document.activeElement && $('editor').contains(document.activeElement)) { renderUpdate(); return; }
   renderEditor();
 });
 api.onFocus((id) => select(id));

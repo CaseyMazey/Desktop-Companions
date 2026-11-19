@@ -5,23 +5,23 @@ const PETS = [
   ['cat', 'Mauz', 'Katze', '#f4a261', 'Streck-Pause'],
   ['blob', 'Blubb', 'Schleim', '#7dd3a8', 'Trink-Erinnerung'],
   ['bird', 'Piep', 'Vogel', '#7cc6f2', 'Bote'],
-  ['beau', 'Beau', 'Kater mit Hexenhut', '#d99a36', 'Tageszauber'],
+  ['beau', 'Beau', 'Kater mit Hexenhut', '#d99a36', 'Tageszauber', 'special'], // Special-Charakter aus Caseys Spiel Storybound
   ['fox', 'Fips', 'Fuchs', '#f28c38', 'Feierabend-Fuchs'],
   ['owl', 'Huhu', 'Eule', '#b08463', 'Lernbegleiterin'],
-  ['frog', 'Quak', 'Frosch', '#7cc97a', 'Wetterfrosch'],
+  ['frog', 'Quak', 'Frosch', '#7cc97a', 'Witz des Tages'],
   ['penguin', 'Watschel', 'Pinguin', '#475569', 'Atem-Pause'],
-  ['bunny', 'Hoppel', 'Hase', '#e9d8c8', 'Zeit & Timer'],
+  ['bunny', 'Hoppel', 'Hase', '#e9d8c8', 'Zeitwächter'],
   ['panda', 'Bambus', 'Panda', '#f5f3ef', 'Augenpause'],
-  ['axolotl', 'Lotti', 'Axolotl', '#f9a8c9', 'Lob'],
+  ['axolotl', 'Lotti', 'Axolotl', '#f9a8c9', 'Aufgaben-Fan'],
   ['dragon', 'Funke', 'Drache', '#6fcf97', 'Hüter'],
-  ['mushroom', 'Pilzi', 'Pilz', '#e5534b', 'Pausen-Garten'],
+  ['mushroom', 'Pilzi', 'Pilz', '#e5534b', 'Wetter-Pilz', 'wx-sun'], // zeigt das Wetter: hier mit Sonnenbrille
   ['robot', 'Bip', 'Roboter', '#9fb4c7', 'Fokus-Timer'],
 ];
 const dark = (hex) => { const n = parseInt(hex.slice(1), 16); return `rgb(${[(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => Math.round(v * 0.68)).join(',')})`; };
 const grid = document.getElementById('grid');
-for (const [sp, name, animal, color, talent] of PETS) {
+for (const [sp, name, animal, color, talent, extra] of PETS) {
   const cell = document.createElement('div');
-  cell.className = 'cell idle';
+  cell.className = `cell idle ${extra || ''}`.trim();
   cell.style.setProperty('--c', color);
   cell.style.setProperty('--c-dark', dark(color));
   const art = document.createElement('div');
@@ -32,5 +32,6 @@ for (const [sp, name, animal, color, talent] of PETS) {
   const s = document.createElement('small'); s.textContent = animal;
   const t = document.createElement('span'); t.className = 'talent'; t.textContent = talent;
   cell.append(art, shadow, b, s, t);
+  if (extra === 'special') { const sp2 = document.createElement('span'); sp2.className = 'special-badge'; sp2.textContent = '✨ Special · aus Storybound'; cell.append(sp2); }
   grid.appendChild(cell);
 }

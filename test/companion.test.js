@@ -10,6 +10,8 @@ const { snappyDecompress, cardsFromSubjects, readValue, decodeLocalStorage, load
 
 const at = (h, m = 0, day = 19) => new Date(2026, 10, day, h, m);
 const pet = (kind, species, talent = {}) => ({ ...createChosenPet(kind, species), talent: normalizeTalent(species, talent) });
+// Pet laeuft schon eine Weile (sonst kommt der erste Spruch absichtlich zu einer zufaelligen Zeit)
+const fresh = () => ({ compAt: 1 });
 const ctx = (now, extra = {}) => ({ now, activeMin: 30, away: false, battery: null, weather: {}, cards: [], ...extra });
 
 test('Begleiter-Modus: jedes Tier hat Sprüche, Beschreibung und Schreck-Reaktion', () => {
@@ -22,49 +24,57 @@ test('Begleiter-Modus: jedes Tier hat Sprüche, Beschreibung und Schreck-Reaktio
 });
 
 test('Begleiter-Modus nur ohne App, mit Pause dazwischen', () => {
-  assert.equal(companionDue(pet('nook', 'dragon'), {}, ctx(at(10))), null, 'mit App: normal');
-  const dragon = pet('none', 'dragon'); const mem = {};
+  assert.equal(companionDue(pet('nook', 'dragon'), fresh(), ctx(at(10))), null, 'mit App: normal');
+  const dragon = pet('none', 'dragon'); const mem = fresh();
   const r = companionDue(dragon, mem, ctx(at(10)), () => 0.9);
   assert.ok(r && r.text, 'ohne App: Energie-Spruch');
   assert.equal(companionDue(dragon, mem, ctx(at(10, 10)), () => 0.9), null, 'nicht gleich wieder');
   assert.ok(companionDue(dragon, mem, ctx(at(10, 40)), () => 0.9));
-  assert.equal(companionDue(pet('none', 'dragon'), {}, ctx(at(23))), null, 'nachts still');
-  assert.equal(companionDue(pet('none', 'dragon'), {}, ctx(at(10), { away: true })), null, 'niemand da');
-  assert.equal(companionDue(pet('none', 'ghost'), {}, ctx(at(10)), () => 0.1).action, 'scare');
-  assert.equal(companionDue(pet('none', 'cat'), {}, ctx(at(10)), () => 0.1).action, 'territory');
-  assert.equal(companionDue(pet('none', 'cat'), {}, ctx(at(10)), () => 0.3).action, 'gift');
-  assert.equal(companionDue(pet('none', 'cat'), {}, ctx(at(10)), () => 0.5).action, 'nap');
-  assert.equal(companionDue(pet('none', 'penguin'), {}, ctx(at(10)), () => 0.2).action, 'slide');
-  assert.equal(companionDue(pet('none', 'robot'), {}, ctx(at(10)), () => 0.2).action, 'sysreport');
-  assert.equal(companionDue(pet('none', 'beau'), {}, ctx(at(10)), () => 0.2).action, 'trick');
-  assert.doesNotMatch(companionDue(pet('none', 'bunny'), {}, ctx(at(14, 5)), () => 0.99).text || '', /\{time\}/);
+  assert.equal(companionDue(pet('none', 'dragon'), fresh(), ctx(at(23))), null, 'nachts still');
+  assert.equal(companionDue(pet('none', 'dragon'), fresh(), ctx(at(10), { away: true })), null, 'niemand da');
+  assert.equal(companionDue(pet('none', 'ghost'), fresh(), ctx(at(10)), () => 0.1).action, 'scare');
+  assert.equal(companionDue(pet('none', 'cat'), fresh(), ctx(at(10)), () => 0.1).action, 'territory');
+  assert.equal(companionDue(pet('none', 'cat'), fresh(), ctx(at(10)), () => 0.3).action, 'gift');
+  assert.equal(companionDue(pet('none', 'cat'), fresh(), ctx(at(10)), () => 0.5).action, 'nap');
+  assert.equal(companionDue(pet('none', 'penguin'), fresh(), ctx(at(10)), () => 0.2).action, 'slide');
+  assert.equal(companionDue(pet('none', 'robot'), fresh(), ctx(at(10)), () => 0.2).action, 'sysreport');
+  assert.equal(companionDue(pet('none', 'beau'), fresh(), ctx(at(10)), () => 0.2).action, 'trick');
+  assert.doesNotMatch(companionDue(pet('none', 'bunny'), fresh(), ctx(at(14, 5)), () => 0.99).text || '', /\{time\}/);
+});
+
+test('Nicht alle auf einmal: der erste Begleiter-Spruch kommt zu einer zufaelligen Zeit', () => {
+  // frisch gestartet: nicht sofort (zufaelliger Start bis ~35 Minuten), aber irgendwann schon
+  assert.equal(companionDue(pet('none', 'dragon'), {}, ctx(at(10)), () => 0.99), null);
+  const m = {};
+  companionDue(pet('none', 'dragon'), m, ctx(at(10)), () => 0.99);
+  assert.ok(companionDue(pet('none', 'dragon'), m, ctx(at(10, 30)), () => 0.99), '15 Minuten nach dem Start ist er dran');
 });
 
 test('Huhu: mit Nook Karteikarten, sonst Fakten', () => {
   const cards = [{ q: 'Auf welcher Schicht liegt MQTT?', a: 'Anwendungsschicht', subject: 'LF 9' }];
-  const quiz = companionDue(pet('nook', 'owl'), {}, ctx(at(10), { cards }));
+  const quiz = companionDue(pet('nook', 'owl'), fresh(), ctx(at(10), { cards }));
   assert.match(quiz.text, /MQTT/);
   assert.equal(quiz.quiz.a, 'Anwendungsschicht');
-  const fact = companionDue(pet('none', 'owl'), {}, ctx(at(10)));
+  const fact = companionDue(pet('none', 'owl'), fresh(), ctx(at(10)));
   assert.ok(FACTS.includes(fact.text) && !fact.quiz);
-  assert.ok(companionDue(pet('dan', 'owl'), {}, ctx(at(10))).text, 'auch mit anderer App ab und zu Fakten');
-  assert.ok(!companionDue(pet('nook', 'owl'), {}, ctx(at(10))).quiz, 'Nook ohne Karten: Fakten');
+  assert.ok(companionDue(pet('dan', 'owl'), fresh(), ctx(at(10))).text, 'auch mit anderer App ab und zu Fakten');
+  assert.ok(!companionDue(pet('nook', 'owl'), fresh(), ctx(at(10))).quiz, 'Nook ohne Karten: Fakten');
 });
 
 test('Charakter-Momente mit echtem Bezug', () => {
   // Hoppel: Sperrzeit wird beim Entsperren gemeldet (lockLine), nicht mehr ueber "weg vom Rechner"
-  assert.doesNotMatch((companionDue(pet('none', 'bunny'), {}, ctx(at(10, 20), { backFromBreak: 47 })) || {}).text || '', /47/);
+  assert.doesNotMatch((companionDue(pet('none', 'bunny'), fresh(), ctx(at(10, 20), { backFromBreak: 47 })) || {}).text || '', /47/);
   assert.match(lockLine(47, 83, 'lock', () => 0), /47 Minuten gesperrt.*Heute insgesamt: 1:23/);
   assert.match(lockLine(95, 95, 'sleep', () => 0), /1 Std\. 35 Min\. im Ruhezustand/);
   // Piep: Zeitung am Morgen, einmal
-  const bm = {};
+  const bm = fresh();
   assert.equal(companionDue(pet('none', 'bird'), bm, ctx(at(8))).action, 'paper');
   assert.notEqual((companionDue(pet('none', 'bird'), bm, ctx(at(8, 5))) || {}).action, 'paper');
   // Fips: Plan des Tages morgens, Nachfrage vor Feierabend (Mittwoch)
-  assert.match(companionDue(pet('none', 'fox'), {}, ctx(at(9, 30))).text, /Plan des Tages/);
+  assert.match(companionDue(pet('none', 'fox'), fresh(), ctx(at(9, 30))).text, /Plan des Tages/);
   assert.match(companionDue(pet('none', 'fox', { endTime: '17:00' }), { moments: { day: '2026-11-19', plan: true } }, ctx(at(16))).text, /geschafft/);
   // Lotti: zaehlt keine Stunden mehr, sondern Klicks – und freut sich immer mehr
-  assert.doesNotMatch((companionDue(pet('none', 'axolotl'), {}, ctx(at(11), { activeMin: 62 }), () => 0.9) || {}).text || '', /Stunde/);
+  assert.doesNotMatch((companionDue(pet('none', 'axolotl'), fresh(), ctx(at(11), { activeMin: 62 }), () => 0.9) || {}).text || '', /Stunde/);
   assert.match(lottiPraise(1, () => 0), /Erste Aufgabe/);
   assert.match(lottiPraise(4, () => 0), /4 Aufgaben/);
   assert.match(lottiPraise(7, () => 0), /7 Aufgaben/);
@@ -79,18 +89,18 @@ test('Charakter-Momente mit echtem Bezug', () => {
   assert.equal(weatherLook({ min: -4, max: 1, rain: 0, code: 1, wind: 5 }).cold, true);
   // Mauz: beleidigt nach Stunden ohne Streicheln
   assert.match(companionDue(pet('none', 'cat'), { lastPetAt: at(8).getTime() }, ctx(at(13), { activeMin: 150 })).text, /beleidigt/);
-  // Quak: Schirm bei Regen
-  assert.equal(companionDue(pet('none', 'frog'), {}, ctx(at(9), { weather: { berlin: { min: 4, max: 8, rain: 90, code: 63 } } })).action.prop, '☂️');
+  // Quak hat kein Wetter mehr (das macht Pilzi): auch bei Regen kein Schirm
+  assert.equal(((companionDue(pet('none', 'frog'), fresh(), ctx(at(9), { weather: { berlin: { min: 4, max: 8, rain: 90, code: 63 } } }), () => 0.9) || {}).action || {}).prop, undefined);
 });
 
 test('Info am Namensschild', () => {
-  assert.equal(companionInfo(pet('none', 'dragon'), {}, ctx(at(10), { battery: { level: 0.78, charging: true } })), '🔋 78 % ⚡');
-  assert.equal(companionInfo(pet('nook', 'dragon'), {}, ctx(at(10))), '', 'mit App keine Info');
-  assert.equal(companionInfo(pet('none', 'bunny'), {}, ctx(at(14, 5))), '⏰ 14:05');
+  assert.equal(companionInfo(pet('none', 'dragon'), fresh(), ctx(at(10), { battery: { level: 0.78, charging: true } })), '🔋 78 % ⚡');
+  assert.equal(companionInfo(pet('nook', 'dragon'), fresh(), ctx(at(10))), '', 'mit App keine Info');
+  assert.equal(companionInfo(pet('none', 'bunny'), fresh(), ctx(at(14, 5))), '⏰ 14:05');
   assert.equal(companionInfo(pet('none', 'bunny'), { lockDay: '2026-11-19', lockTotal: 83 }, ctx(at(14, 5))), '⏰ 14:05 · 🔒 1:23 gesperrt');
   assert.equal(companionInfo(pet('none', 'mushroom', { place: 'Berlin' }), { garden: 2 }, ctx(at(9), { weather: { berlin: { min: 1, max: 9, rain: 0, code: 0, wind: 40 } } })), '☀️ sonnig, windig · 🌱 2');
-  assert.match(companionInfo(pet('none', 'fox', { endTime: '17:00' }), {}, ctx(at(15, 30))), /1:30 bis Feierabend/);
-  assert.equal(companionInfo(pet('nook', 'owl'), {}, ctx(at(10), { cards: [{}, {}] })), '🗂️ 2 Karteikarten');
+  assert.match(companionInfo(pet('none', 'fox', { endTime: '17:00' }), fresh(), ctx(at(15, 30))), /1:30 bis Feierabend/);
+  assert.equal(companionInfo(pet('nook', 'owl'), fresh(), ctx(at(10), { cards: [{}, {}] })), '🗂️ 2 Karteikarten');
   assert.equal(companionInfo(pet('none', 'ghost'), { pets: 2 }, ctx(at(10))), '👻 Mut: 17 %');
   assert.equal(companionInfo(pet('none', 'cat'), { lastPetAt: at(9, 50).getTime() }, ctx(at(10))), '😽 Laune: gnädig');
   assert.equal(companionInfo(pet('none', 'blob'), { glasses: 3 }, ctx(at(10))), '🥛 3 Gläser · Stimmung SUPER');

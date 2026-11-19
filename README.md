@@ -31,6 +31,7 @@ Du vergisst beim Arbeiten, deinen Ausbildungsnachweis zu schreiben, Wasser zu tr
 - ✳️ **Sagt Bescheid, wenn Claude fertig ist.** Ideal mit mehreren Monitoren: Setz ein Pet in die Ecke, und du verpasst nichts mehr.
 - 🔗 **Verbunden mit deiner App.** Ein Klick aufs Pet öffnet NEXUS, DAN, Nook, Claude, Gmail, Spotify oder jede andere App.
 - 💬 **Mehrere Pets, die miteinander reden.** Stehen sie nebeneinander, plaudern sie ab und zu – und jedes Tier bleibt dabei es selbst.
+- ✨ **Ohne App ein echter Begleiter.** Dann zeigt jedes Tier seinen Charakter noch stärker: Funke zeigt deinen Akku, Hoppel zählt, wie lange der PC gesperrt war, Lotti feiert deine erledigten Aufgaben, Pilzi zieht sich passend zum Wetter an …
 - 💛 **Streicheln erlaubt.** Fahr mit der Maus über ein Pet hin und her – es freut sich. Die Augen folgen deinem Mauszeiger.
 - 🔒 **Ohne Konto, ohne Server.** Desktop Companions läuft komplett auf deinem Rechner.
 
@@ -76,7 +77,8 @@ Unter Linux gehen Klicks direkt neben dem Pet nicht zum Fenster dahinter durch (
 
 | Aktion | Was passiert |
 |---|---|
-| **Klick aufs Pet** | öffnet die verbundene App |
+| **Klick aufs Pet** | öffnet die verbundene App. Ohne App: Lotti zählt eine erledigte Aufgabe, Blubb ein Glas Wasser, Beau zieht die Tageskarte, Bip zeigt den Systembericht |
+| **Drüberfahren** | zeigt den Namen – ohne App mit einer Info (z. B. Akku, Uhrzeit, Wetter) |
 | **Klick auf die Sprechblase** | öffnet die App (z. B. DAN, um gleich aufzuschreiben) |
 | **Ziehen** | verschiebt das Pet; auf einem anderen abgesetzt, rutscht es zur Seite |
 | **Maus hin und her (ohne Klick)** | streichelt das Pet: Augen zu, Herzchen, ein Spruch |
@@ -89,28 +91,30 @@ Beim ersten Start legt Desktop Companions für jede gefundene App (NEXUS, DAN, N
 ## Die Pets
 
 <p align="center">
-  <img src="docs/screenshots/all-pets.png" alt="Alle 15 Pets mit Name, Tier und Talent: Buh (Geist, Diskret), Mauz (Katze, Streck-Pause), Blubb (Schleim, Trink-Erinnerung), Piep (Vogel, Bote), Beau (Kater mit Hexenhut, Tageszauber), Fips (Fuchs, Feierabend-Fuchs), Huhu (Eule, Lernbegleiterin), Quak (Frosch, Wetterfrosch), Watschel (Pinguin, Atem-Pause), Hoppel (Hase, Zeit & Timer), Bambus (Panda, Augenpause), Lotti (Axolotl, Lob), Funke (Drache, Hüter), Pilzi (Pilz, Pausen-Garten), Bip (Roboter, Fokus-Timer)" width="820">
+  <img src="docs/screenshots/all-pets.png" alt="Alle 15 Pets mit Name, Tier und Talent: Buh (Geist, Diskret), Mauz (Katze, Streck-Pause), Blubb (Schleim, Trink-Erinnerung), Piep (Vogel, Bote), Beau (Kater mit Hexenhut, Tageszauber, Special-Charakter aus Storybound), Fips (Fuchs, Feierabend-Fuchs), Huhu (Eule, Lernbegleiterin), Quak (Frosch, Witz des Tages), Watschel (Pinguin, Atem-Pause), Hoppel (Hase, Zeitwächter), Bambus (Panda, Augenpause), Lotti (Axolotl, Aufgaben-Fan), Funke (Drache, Hüter), Pilzi (Pilz mit Sonnenbrille, Wetter-Pilz), Bip (Roboter mit Monitor-Gesicht, Fokus-Timer)" width="820">
 </p>
 
-Jedes Tier hat einen eigenen Charakter und ein Talent. Talente melden sich nur ein paar Mal am Tag, nie, wenn du weg bist, und lassen sich pro Pet in den Einstellungen ausschalten oder anpassen.
+Jedes Tier hat einen eigenen Charakter und ein Talent. Talente melden sich nur ein paar Mal am Tag, nie, wenn du weg bist, und lassen sich pro Pet in den Einstellungen ausschalten oder anpassen. **Ohne verbundene App** wird das Pet zum Begleiter und zeigt seinen Charakter stärker (rechte Spalte): eigene Sprüche und Aktionen und beim Drüberfahren eine Info am Namensschild.
 
-| Pet | Charakter | Talent |
-|---|---|---|
-| **Buh** 👻 | schüchtern, entschuldigt sich ständig | **Diskret:** wird durchsichtig, wenn die Maus kommt; im Meeting (Mikrofon oder Kamera an) oder bei Vollbild versteckt Buh **alle** Pets (Windows) |
-| **Mauz** 🐱 | Diva, heimlich fürsorglich | **Streck-Pause:** nach etwa 90 Minuten am Stück streckt sie sich – du machst mit |
-| **Blubb** 🟢 | überschwänglicher Optimist | **Trink-Erinnerung:** etwa alle 75 Minuten |
-| **Piep** 🐦 | neugierige Plaudertasche | **Bote:** erzählt dir, was passiert ist, während du weg warst |
-| **Beau** 🎩 | mystisch, würdevoll, herzlich | **Tageszauber:** einmal am Tag eine Karte aus dem Hut |
-| **Fips** 🦊 | schlau und verschmitzt | **Feierabend-Fuchs:** 30 Minuten vorher „Was willst du noch schaffen?“, dann „Feierabend!“ (Uhrzeit einstellbar) |
-| **Huhu** 🦉 | weise Professorin | **Lernbegleiterin:** Lernpausen, abends „Was hast du gelernt?“, nachts große Augen |
-| **Quak** 🐸 | laut, gut gelaunt, liebt Kalauer | **Wetterfrosch:** morgens das Wetter mit Tipp – nur wenn du einen Ort einträgst |
-| **Watschel** 🐧 | tiefenentspannt | **Atem-Pause:** Rechtsklick → eine Minute gemeinsam atmen |
-| **Hoppel** 🐰 | nervös, immer in Eile | **Zeit & Timer:** Rechtsklick → „Erinnere mich in …“, auf Wunsch die volle Stunde |
-| **Bambus** 🐼 | gemütlicher Genießer | **Augenpause 20-20-20:** alle 20 Minuten kurz in die Ferne schauen |
-| **Lotti** 🩷 | dein größter Fan | **Lob:** feiert jeden fertigen Auftrag und zählt abends zusammen |
-| **Funke** 🐉 | stolzer Beschützer | **Hüter:** warnt bei schwachem Akku, erinnert wöchentlich an die Datensicherung |
-| **Pilzi** 🍄 | still und philosophisch | **Pausen-Garten:** jede Pause lässt neben ihm etwas wachsen |
-| **Bip** 🤖 | logisch, lernt Gefühle | **Fokus-Timer:** Rechtsklick → 25 Minuten Fokus, 5 Pause, mit Countdown |
+> ✨ **Beau ist ein Special-Charakter** – der schwarze Kater mit Hexenhut stammt aus meinem Spiel **Storybound**.
+
+| Pet | Charakter | Talent | Ohne App (Begleiter) |
+|---|---|---|---|
+| **Buh** 👻 | schüchtern, entschuldigt sich ständig | **Diskret:** wird durchsichtig, wenn die Maus kommt; im Meeting (Mikrofon oder Kamera an) versteckt er alle Pets, bei Vollbild die Pets auf diesem Monitor (Windows) | versucht, die Pets neben sich zu erschrecken – und entschuldigt sich sofort |
+| **Mauz** 🐱 | Diva, heimlich fürsorglich | **Streck-Pause:** etwa alle 75 Minuten eine konkrete Streckübung (Nacken, Schultern, Handgelenke, Rücken) – sie macht vor, du machst mit | „Mein Platz.“ – vertreibt Nachbarn, bringt Geschenke 🐭, haut nach dem Mauszeiger, ist beleidigt, wenn niemand sie streichelt |
+| **Blubb** 🟢 | überschwänglicher Optimist | **Trink-Erinnerung:** etwa alle 75 Minuten | Klick = ein Glas Wasser getrunken 🥛, teilt sich vor Freude, tröstet bei Fehlermeldungen |
+| **Piep** 🐦 | neugierige Plaudertasche | **Bote:** erzählt dir, was passiert ist, während du weg warst | Tageszeitung am Morgen, Klatsch über die anderen Pets |
+| **Beau** 🎩 ✨ | mystisch, würdevoll, herzlich | **Tageszauber:** einmal am Tag eine Karte aus dem Hut | Zaubertrick: lässt ein Pet kurz verschwinden; Klick = Tageskarte; liest den Mond |
+| **Fips** 🦊 | schlau und verschmitzt | **Feierabend-Fuchs:** 30 Minuten vorher „Was willst du noch schaffen?“, dann „Feierabend!“ (Uhrzeit einstellbar) | Plan des Tages am Morgen, Nachfrage am Abend, schleicht davon; Info: Zeit bis Feierabend |
+| **Huhu** 🦉 | weise Professorin | **Lernbegleiterin:** Lernpausen, abends „Was hast du gelernt?“, nachts große Augen | erzählt interessante Fakten. **Mit Nook verbunden:** fragt deine Nook-Karteikarten ab, die Antwort kommt 10 Sekunden später |
+| **Quak** 🐸 | laut, gut gelaunt, liebt Kalauer | **Witz des Tages:** einmal am Vormittag und einmal am Nachmittag ein Witz für gute Laune – er lacht am lautesten selbst | schnappt mit der Zunge nach deinem Mauszeiger 🪰 und zählt die „Fliegen“, noch mehr Kalauer und Hüpfer |
+| **Watschel** 🐧 | tiefenentspannt | **Atem-Pause:** Rechtsklick → eine Minute gemeinsam atmen | rutscht auf dem Bauch über den Boden, beruhigt bei hektischer Maus, tröstet Erschreckte |
+| **Hoppel** 🐰 | nervös, immer in Eile | **Zeitwächter:** zählt, wie lange der PC gesperrt war oder schlief, und sagt es beim Entsperren; Rechtsklick → Timer; auf Wunsch die volle Stunde | sprintet, Panik vor der vollen Stunde; Info: Uhrzeit und Sperrzeit heute |
+| **Bambus** 🐼 | gemütlicher Genießer | **Augenpause 20-20-20:** alle 20 Minuten kurz in die Ferne schauen | döst ein, macht Purzelbäume, sein Gähnen steckt die Nachbarn an |
+| **Lotti** 🩷 | dein größter Fan | **Aufgaben-Fan:** feiert fertige Aufträge (3C, Claude) und zählt abends zusammen | Klick = Aufgabe erledigt: zählt mit, sagt etwas Liebes und freut sich immer mehr 🎉 |
+| **Funke** 🐉 | stolzer Beschützer | **Hüter:** warnt bei schwachem Akku, erinnert wöchentlich an die Datensicherung | Energie-Tipps (Schlaf, Wasser, Pausen); Info: dein Akkustand |
+| **Pilzi** 🍄 | still und philosophisch | **Wetter-Pilz:** zieht sich passend zum Wetter an – Sonnenbrille, Pilzfreund bei Regen, klein bei Wind, Schneehaube, Schal (mit Ort); nebenbei wächst mit jeder Pause etwas | Naturweisheiten; Info: Wetter und Garten |
+| **Bip** 🤖 | logisch, lernt Gefühle | **Fokus-Timer:** Rechtsklick → 25 Minuten Fokus, 5 Pause, Countdown auf seinem Bildschirm | sein Gesicht ist ein Monitor: Herz beim Streicheln, „RAM 63 %“ beim Systembericht; lernt Gefühle |
 
 ## Voreinstellungen
 
@@ -126,8 +130,9 @@ Jedes Tier hat einen eigenen Charakter und ein Talent. Talente melden sich nur e
 | **Google Kalender · Teams** | Kalender: fragt werktags um 8:45, was heute ansteht · Teams: öffnet Teams |
 | **Spotify · Notion · Obsidian** | öffnet die App (sonst die Webseite) |
 | **Eigene App** | öffnet ein beliebiges Programm, eine Datei oder eine `https://`-Adresse |
+| **Ohne App** | reiner Begleiter: das Tier zeigt seinen Charakter stärker ([siehe oben](#die-pets)) |
 
-**Neues Pet anlegen:** *+ Neues Pet* (Einstellungen oder Tray) → erst das **Tier** wählen, dann die **Verbindung**. Beau 🎩 ist ein eigenes Tier: mit Nook bekommt er seine eigenen Sprüche und begrüßt dich beim Start.
+**Neues Pet anlegen:** *+ Neues Pet* (Einstellungen oder Tray) → erst das **Tier** wählen, dann die **Verbindung**. Beau 🎩 ✨ (Special-Charakter aus Storybound) begrüßt dich beim Start; mit Nook bekommt er seine eigenen Sprüche.
 
 Alles lässt sich pro Pet in den Einstellungen ändern: Tier, Farbe, Größe, Talent, Sprüche, Abstand, Uhrzeiten und ob es herumläuft.
 

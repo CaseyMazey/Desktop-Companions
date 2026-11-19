@@ -3,7 +3,7 @@ const assert = require('node:assert');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { TALENTS, normalizeTalent, talentDue, weatherLine, shortEvent } = require('../src/talents');
+const { TALENTS, normalizeTalent, talentDue, JOKES, shortEvent } = require('../src/talents');
 const { SPECIES } = require('../src/presets');
 const { createChosenPet } = require('../src/logic');
 const { installHook, hasHook, eventFromHook, hookCommand } = require('../src/claudehook');
@@ -66,10 +66,18 @@ test('Bote, Lob, Garten, Akku, Wetter', () => {
   assert.match(talentDue(dragon, dm, ctx(at(12), { battery: { level: 0.18, charging: false } })).text, /18 %|Ladekabel/);
   assert.equal(talentDue(dragon, dm, ctx(at(12, 5), { battery: { level: 0.17, charging: false } })), null, 'nicht dauernd');
 
-  const frog = pet('frog', { place: 'Berlin' });
-  assert.equal(talentDue(pet('frog'), {}, ctx(at(8), { weather: { berlin: { min: 3, max: 9, rain: 80, code: 61 } } })), null, 'ohne Ort kein Wetter');
-  assert.match(talentDue(frog, {}, ctx(at(8), { weather: { berlin: { min: 3, max: 9, rain: 80, code: 61 } } })).text, /Berlin: 3–9 °C, Regen/);
-  assert.match(weatherLine({ min: 18, max: 29, rain: 0, code: 0 }, 'Rom'), /Sonnenbrille/);
+  // Quak: Witz des Tages – einmal vormittags, einmal nachmittags, nie zweimal derselbe hintereinander
+  const frog = pet('frog'); const fm = {};
+  assert.equal(talentDue(frog, fm, ctx(at(8), { activeMin: 20 })), null, 'vor 9 Uhr kein Witz');
+  const j1 = talentDue(frog, fm, ctx(at(10), { activeMin: 20 }), () => 0);
+  assert.ok(JOKES.includes(j1.text));
+  assert.equal(talentDue(frog, fm, ctx(at(11), { activeMin: 20 }), () => 0), null, 'vormittags nur einmal');
+  const j2 = talentDue(frog, fm, ctx(at(15), { activeMin: 20 }), () => 0);
+  assert.ok(j2 && j2.text !== j1.text, 'nachmittags ein anderer Witz');
+  assert.ok(!('place' in normalizeTalent('frog', { place: 'Berlin' })), 'Quak braucht keinen Ort mehr');
+  assert.ok(JOKES.length >= 15);
+  // Mauz: konkrete Streckuebung
+  assert.match(talentDue(pet('cat'), {}, ctx(at(10), { activeMin: 80 }), () => 0).text, /Arme über den Kopf/);
 });
 
 test('Claude-Code-Hook: eintragen, ohne Fremdes zu verlieren, und Meldungen lesen', () => {

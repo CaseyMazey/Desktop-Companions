@@ -82,17 +82,65 @@ function normalizeState(s) {
   if (g.stayDefault !== true) for (const p of pets) { p.wander = false; if (p.homeX == null) p.homeX = p.x; }
   // Einmalig (0.8.0): "Claude"-Pets hoeren jetzt auch auf Claude Code – in 0.7.0 waren ihre Meldungen aus
   if (g.claudeEvents !== true) for (const p of pets) if (p.kind === 'claude') p.events = true;
+  // Einmalig (0.11.0): feste Uhrzeiten (z. B. 12:30 Mittagspause) gelten jetzt fuer alle und stehen in den Einstellungen;
+  // was bisher bei einzelnen Pets stand, wird uebernommen – das Pet bleibt der "Sprecher"
+  let timed = Array.isArray(g.timed) ? g.timed : [];
+  if (g.timedShared !== true) {
+    timed = timed.slice();
+    for (const p of pets) { timed.push(...p.reminders.timed.map((t) => ({ ...t, pet: p.id }))); p.reminders.timed = []; }
+  }
   return {
     pets,
     settings: {
       stayDefault: true,
       claudeEvents: true,
+      timedShared: true,
       chatter: ['aus', 'selten', 'normal', 'oft'].includes(g.chatter) ? g.chatter : 'normal',
       autostart: !!g.autostart,
       autoUpdate: g.autoUpdate !== false,
       firstRun: g.firstRun !== false,
+      theme: ['dark', 'light', 'system'].includes(g.theme) ? g.theme : 'dark',
+      timed: normalizeShared(timed, pets),
     },
   };
+}
+
+// Gemeinsame feste Uhrzeiten: [{ time: '12:30', text: 'Mittagspause!', pet: '<id>' | '' }] – doppelte fallen weg
+function normalizeShared(list, pets = []) {
+  const ids = new Set(pets.map((p) => p.id));
+  const seen = new Set();
+  const out = [];
+  for (const t of Array.isArray(list) ? list : []) {
+    if (!t || !TIME.test(t.time)) continue;
+    const text = str(t.text, 200).trim();
+    if (!text) continue;
+    const key = `${t.time}|${text}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ time: t.time, text, pet: ids.has(t.pet) ? t.pet : '' });
+  }
+  return out.sort((a, b) => a.time.localeCompare(b.time)).slice(0, 30);
+}
+
+// Welche gemeinsamen Uhrzeiten sind jetzt dran? (innerhalb von 10 Minuten danach, einmal am Tag)
+function dueShared(timed, mem, now = new Date()) {
+  const day = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
+  const cur = now.getHours() * 60 + now.getMinutes();
+  mem.shared = mem.shared && mem.shared.day === day ? mem.shared : { day };
+  return timed.filter((t) => {
+    const m = minutesOf(t.time);
+    const key = `${t.time}|${t.text}`;
+    if (cur < m || cur >= m + 10 || mem.shared[key]) return false;
+    mem.shared[key] = true;
+    return true;
+  });
+}
+
+// Neues Pet: seine voreingestellten Uhrzeiten (z. B. DAN 15:45) wandern in die gemeinsamen Uhrzeiten
+function takePresetTimed(pet, st) {
+  const moved = pet.reminders.timed.map((t) => ({ ...t, pet: pet.id }));
+  pet.reminders.timed = [];
+  st.settings.timed = normalizeShared([...st.settings.timed, ...moved], [...st.pets, pet]);
 }
 
 // ---------- Erinnerungen ----------
@@ -218,4 +266,4 @@ function chatterDelay(level, rand = Math.random) {
   return (r[0] + rand() * (r[1] - r[0])) * 60000;
 }
 
-module.exports = { createPet, createChosenPet, petsForEvent, normalizePet, normalizeState, dueReminder, inActiveWindow, pickMessage, neighborPairs, neighborGroups, strollTarget, HOME_RADIUS, chatterDelay, overlaps, freeSpot, KINDS };
+module.exports = { normalizeShared, dueShared, takePresetTimed, createPet, createChosenPet, petsForEvent, normalizePet, normalizeState, dueReminder, inActiveWindow, pickMessage, neighborPairs, neighborGroups, strollTarget, HOME_RADIUS, chatterDelay, overlaps, freeSpot, KINDS };

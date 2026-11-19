@@ -27,7 +27,7 @@ const TALENTS = {
       { key: 'hideFullscreen', type: 'bool', label: 'Bei Vollbild alle Pets verstecken (Präsentation, Video, Spiel)', def: true },
     ],
   },
-  cat: { title: 'Streck-Pause', character: 'Diva, unbeeindruckt, heimlich fürsorglich', desc: 'Nach etwa 90 Minuten am Stück streckt sich Mauz – und besteht darauf, dass du mitmachst.', options: [] },
+  cat: { title: 'Streck-Pause', character: 'Diva, unbeeindruckt, heimlich fürsorglich', desc: 'Etwa alle 75 Minuten am Stück gibt Mauz dir eine konkrete Streckübung (Nacken, Schultern, Handgelenke, Rücken …), macht sie vor – und besteht darauf, dass du mitmachst.', options: [] },
   blob: { title: 'Trink-Erinnerung', character: 'überschwänglicher Optimist, alles ist toll', desc: 'Etwa alle 75 Minuten (8–21 Uhr) erinnert Blubb dich ans Trinken – jedes Mal begeistert.', options: [] },
   bird: { title: 'Bote', character: 'neugierig, Plaudertasche, kleiner Reporter', desc: 'Sammelt alle Meldungen, während du weg bist, und erzählt dir, was passiert ist, sobald du zurück bist.', options: [] },
   beau: { title: 'Tageszauber', character: 'mystisch, würdevoll, etwas theatralisch, herzlich', desc: 'Einmal am Tag zieht Beau eine Karte aus dem Hut: ein kleiner Zauberspruch für deinen Tag.', options: [] },
@@ -38,19 +38,19 @@ const TALENTS = {
   },
   owl: { title: 'Lernbegleiterin', character: 'weise, ruhig, Professorin, etwas altmodisch', desc: 'Schlägt nach etwa 50 Minuten eine Lernpause vor, fragt abends, was du gelernt hast, und bekommt nachts große Augen.', options: [] },
   frog: {
-    title: 'Wetterfrosch', character: 'energiegeladen, gut gelaunt, laut, liebt Kalauer',
-    desc: 'Sagt dir morgens das Wetter mit Tipp (Jacke, Schirm, Sonnenbrille). Nur wenn du einen Ort einträgst – der Ort geht dafür an den kostenlosen Wetterdienst open-meteo.com.',
-    options: [{ key: 'place', type: 'text', label: 'Ort (z. B. Berlin) – leer lassen, wenn du das nicht willst', def: '' }],
+    title: 'Witz des Tages', character: 'energiegeladen, gut gelaunt, laut, liebt Kalauer',
+    desc: 'Erzählt dir einmal am Vormittag und einmal am Nachmittag einen Witz oder Kalauer – für gute Laune zwischendurch. Lacht am lautesten über seine eigenen Witze.',
+    options: [],
   },
   penguin: { title: 'Atem-Pause', character: 'tiefenentspannt, cool, durch nichts aus der Ruhe zu bringen', desc: 'Rechtsklick → „Atem-Pause“: eine Minute zusammen atmen, Watschel atmet sichtbar mit. Schlägt das ab und zu auch selbst vor.', options: [] },
   bunny: {
-    title: 'Zeit & Timer', character: 'nervös, immer in Eile, besessen von Pünktlichkeit',
+    title: 'Zeitwächter', character: 'nervös, immer in Eile, besessen von Pünktlichkeit',
     desc: 'Zählt mit, wie lange der PC gesperrt war oder schlief (z. B. wenn du den Arbeitsplatz verlässt), und sagt es dir beim Entsperren. Rechtsklick → „Erinnere mich in …“: ein schneller Timer. Auf Wunsch sagt Hoppel zur vollen Stunde die Uhrzeit an.',
     options: [{ key: 'hourly', type: 'bool', label: 'Zur vollen Stunde die Uhrzeit ansagen (8–20 Uhr)', def: true }],
   },
   panda: { title: 'Augenpause (20-20-20)', character: 'faul, gemütlich, Genießer', desc: 'Alle 20 Minuten am Bildschirm: 20 Sekunden in die Ferne schauen. Bambus hält sich solange selbst die Augen zu.', options: [] },
   axolotl: {
-    title: 'Lob', character: 'dein größter Fan, unendlich positiv, Cheerleader',
+    title: 'Aufgaben-Fan', character: 'dein größter Fan, unendlich positiv, Cheerleader',
     desc: 'Klick auf Lotti, wenn du eine Aufgabe erledigt hast: Sie zählt mit, sagt jedes Mal etwas Liebes und freut sich immer mehr, je mehr du schaffst. Freut sich auch über fertige Aufträge (3C, Claude) und zählt abends zusammen.',
     options: [{ key: 'summary', type: 'time', label: 'Tagesrückblick um', def: '17:30' }],
   },
@@ -63,8 +63,8 @@ const TALENTS = {
     ],
   },
   mushroom: {
-    title: 'Pausen-Garten & Wetter', character: 'still, geduldig, naturverbunden, philosophisch',
-    desc: 'Jede echte Pause (5 Minuten weg vom Rechner) lässt neben Pilzi etwas wachsen. Mit Ort passt er sich dem Wetter an: Sonne = Sonnenbrille, Regen = ein Pilzfreund kommt, Wind = er macht sich klein, Schnee = weißer Hut, Kälte = Schal. Der Ort geht dafür an open-meteo.com.',
+    title: 'Wetter-Pilz', character: 'still, geduldig, naturverbunden, philosophisch',
+    desc: 'Pilzi zeigt dir das Wetter, indem er sich anzieht: Sonne = Sonnenbrille, Regen = ein Pilzfreund kommt und es tropft, Wind = er macht sich klein, Schnee = weißer Hut, Kälte = Schal. Dafür einen Ort eintragen (geht an open-meteo.com). Nebenbei wächst mit jeder echten Pause etwas neben ihm.',
     options: [{ key: 'place', type: 'text', label: 'Ort fürs Wetter (z. B. Berlin) – leer lassen, wenn du das nicht willst', def: '' }],
   },
   robot: { title: 'Fokus-Timer', character: 'logisch, nimmt alles wörtlich, lernt Gefühle', desc: 'Rechtsklick → „Fokus starten“: 25 Minuten Arbeit, 5 Minuten Pause, der Countdown steht über Bip.', options: [] },
@@ -79,7 +79,7 @@ const COMPANION_DESC = {
   beau: 'Zaubert öfter, liest den Mond und sieht Pausen in deiner Zukunft. Info: die heutige Mondphase.',
   fox: 'Schmiedet Pläne und gibt schlaue Arbeitstipps. Info: wie lange noch bis Feierabend.',
   owl: 'Erzählt ab und zu interessante Fakten – auch mit anderen Apps, dann seltener. Mit Nook verbunden: fragt sie Karteikarten aus Nook ab und sagt 10 Sekunden später die Antwort. Info: Fakten heute bzw. Anzahl der Karten.',
-  frog: 'Mehr Kalauer und Hüpfer. Info: die Temperatur heute (mit Ort).',
+  frog: 'Schnappt mit der Zunge nach deinem Mauszeiger (zählt die „Fliegen“), noch mehr Kalauer und Hüpfer. Info: Witze und Fliegen heute.',
   penguin: 'Gibt öfter ruhige Sätze zum Durchatmen. Info: Atem-Pausen heute.',
   bunny: 'Sagt nervös die Uhrzeit, sprintet herum und hat Panik vor der vollen Stunde. Info: Uhrzeit und wie lange der PC heute gesperrt war.',
   panda: 'Hält öfter ein Nickerchen und kaut Bambus. Info: Nickerchen heute.',
@@ -106,7 +106,17 @@ function normalizeTalent(species, t) {
 
 // ---------- Was die Tiere sagen (jedes mit eigener Stimme) ----------
 const LINES = {
-  cat: ['Pff. Ich streck mich jetzt. Du auch. Sofort. 🐱', '*streckt sich ausgiebig* … Was guckst du? Mitmachen!', 'Dein Rücken hat mich angerufen. Er will gestreckt werden.', 'Arme hoch. Ich warte. *gähnt*'],
+  // Mauz: regelmaessig eine konkrete Streckuebung – vorgemacht, im Diva-Ton
+  cat: [
+    'Pff. Streckübung: Arme über den Kopf, Hände verschränken, 10 Sekunden ganz lang machen. Wie ich. 🐱',
+    'Nacken: Kopf langsam nach rechts zur Schulter, 10 Sekunden. Dann links. Ich warte. *gähnt*',
+    'Schultern bis zu den Ohren hochziehen … halten … fallen lassen. Dreimal. Ich schau zu. 😼',
+    'Schultern kreisen: fünfmal nach hinten, fünfmal nach vorn. Elegant, bitte.',
+    'Handgelenke! Arm nach vorn, Finger mit der anderen Hand sanft zurückziehen. 10 Sekunden je Seite. Deine Pfoten danken es dir.',
+    'Katzenbuckel im Sitzen: Rücken rund machen, Kinn zur Brust … dann aufrichten und Brust raus. Dreimal. Das ist MEINE Übung. 🐱',
+    'Aufstehen, auf die Zehenspitzen, ganz lang machen … und runter. Fünfmal. *streckt sich mit*',
+    'Oberkörper im Sitzen nach rechts drehen, an der Lehne festhalten, 10 Sekunden. Dann links. Ich hab Zeit. Viel Zeit.',
+  ],
   blob: ['JUHU! Wasser! Wasser ist so toll! Trink einen Schluck! 💧', 'Blubb blubb! Zeit für ein Glas Wasser! 🥤', 'Weißt du, was super ist? Wasser! Und du! Trink was! 💚', 'Schluck Wasser = glücklicher Blubb! 💧✨'],
   beau: [
     'Ich ziehe eine Karte aus dem Hut … ✨ „Heute gelingt dir etwas, das du gestern noch schwer fandest.“',
@@ -132,17 +142,31 @@ const LINES = {
   robotHello: ['BIP. GUTEN MORGEN, MENSCH. BEREIT FÜR FOKUS? RECHTSKLICK → FOKUS STARTEN. 🤖'],
 };
 
-// Wetter: WMO-Code -> Wort, Tipp mit Kalauer
-function weatherLine(w, place) {
-  const rain = w.rain >= 50 || [51, 53, 55, 61, 63, 65, 80, 81, 82, 95, 96, 99].includes(w.code);
-  const snow = [71, 73, 75, 77, 85, 86].includes(w.code);
-  const sky = snow ? 'Schnee ❄️' : rain ? 'Regen 🌧️' : [0, 1].includes(w.code) ? 'Sonne ☀️' : [2, 3].includes(w.code) ? 'Wolken ⛅' : [45, 48].includes(w.code) ? 'Nebel 🌫️' : 'gemischtes Wetter';
-  const tip = snow ? 'Mütze auf, sonst frierst du dir die Quak-Backen ab!'
-    : rain ? 'Schirm mit, sonst wirst du nass wie ein Frosch! 🐸'
-      : w.max >= 25 ? 'Sonnenbrille und Wasser – heute wird’s heiß!'
-        : w.max <= 8 ? 'Jacke mit, sonst quakst du vor Kälte!' : 'Perfektes Wetter für einen kleinen Hüpfer nach draußen!';
-  return `Quak! ${place}: ${Math.round(w.min)}–${Math.round(w.max)} °C, ${sky}. ${tip}`;
-}
+// Quaks Witz des Tages: Kalauer, Frage und Pointe in einer Blase – er lacht selbst am lautesten
+const JOKES = [
+  'Was macht ein Frosch im Büro? Er hüpft von Meeting zu Meeting! QUAK-QUAK-QUAK! 🐸',
+  'Warum können Frösche so gut Probleme lösen? Sie springen einfach drüber! *lacht sich kaputt*',
+  'Was sagt ein Frosch, wenn er etwas nicht versteht? „Quak-tisch unmöglich!“ 🐸😂',
+  'Wie nennt man einen Frosch mit Krone? Einen Prinzen in der Probezeit! HAHA!',
+  'Was ist grün und klopft an die Tür? Ein Klopfrosch! … Ich bin so lustig. 🐸',
+  'Treffen sich zwei Kerzen. Sagt die eine: „Ist Wasser gefährlich?“ – „Davon kannst du ausgehen!“ QUAK! 😂',
+  'Warum nehmen Programmierer ihre Brille ab, wenn sie Hunger haben? Weil sie nicht C#! Ich meine … sehen scharf! 🐸',
+  'Was ist ein Keks unter einem Baum? Ein schattiges Plätzchen! *quakt vor Lachen*',
+  'Wie nennt man einen Bumerang, der nicht zurückkommt? Einen Stock! 😂🐸',
+  'Was sitzt auf dem Baum und schreit „Aha“? Ein Uhu mit Sprachfehler! Huhu ist beleidigt. 🦉😂',
+  'Was liegt am Strand und spricht undeutlich? Eine Nuschel! QUAK!',
+  'Warum ging der Computer zum Arzt? Er hatte einen Virus! … und ein bisschen Fieber-Bytes. 🐸',
+  'Was ist orange und läuft durch den Wald? Eine Wanderine! 🍊😂',
+  'Ich hab einen Witz über Treppen … der geht steil! *hüpft vor Lachen*',
+  'Warum sind Fische so schlecht in Tennis? Sie haben Angst vor dem Netz! 🐟😂',
+  'Sagt der Frosch zum Kellner: „Eine Fliege, bitte.“ – „Gern, zum Mitnehmen?“ – „Nein, zum Fangen!“ QUAK!',
+  'Was macht ein Pirat am Computer? Er drückt die Enter-Taste! Arrr! 🏴‍☠️🐸',
+  'Wie nennt man ein verschwundenes Rind? Oxford! … Okay, der war hoch. 😂',
+  'Warum hat der Mathebuch-Frosch so viele Probleme? Weil er voller Aufgaben ist! 🐸📘',
+  'Was ist grün und hüpft durchs Gras? Ein Grashüpfer! … Und ich. Hauptsächlich ich! QUAK!',
+];
+
+// ---------- Wann meldet sich ein Talent? ----------
 
 // ---------- Wann meldet sich ein Talent? ----------
 // mem: Gedaechtnis pro Pet (lastAt, count je Tag, ...), wird hier veraendert
@@ -155,7 +179,7 @@ function talentDue(pet, mem, ctx, rnd = Math.random) {
   if (mem.day !== day) {
     mem.day = day; mem.count = 0; mem.once = {};
     if (pet.species === 'mushroom') mem.garden = 0;
-    Object.assign(mem, { naps: 0, facts: 0, events: 0, focusMin: 0, breaths: 0, pets: 0, glasses: 0, flies: 0, scares: 0, panics: 0, tricks: 0 }); // Tageszaehler
+    Object.assign(mem, { naps: 0, facts: 0, events: 0, focusMin: 0, breaths: 0, pets: 0, glasses: 0, flies: 0, scares: 0, panics: 0, tricks: 0, jokes: 0 }); // Tageszaehler
   }
   const sinceMin = (k) => (mem[k] ? (now - mem[k]) / 60000 : Infinity);
   const onceToday = (k) => { if (mem.once[k]) return false; mem.once[k] = true; return true; };
@@ -165,7 +189,7 @@ function talentDue(pet, mem, ctx, rnd = Math.random) {
 
   switch (pet.species) {
     case 'cat': // Streck-Pause: 90 Minuten am Stueck aktiv
-      if (hours(8, 22) && mem.count < 4 && ctx.activeMin >= 90 && sinceMin('lastAt') >= 90) return say(pick(LINES.cat, rnd), 'stretch', { action: 'stretch' });
+      if (hours(8, 22) && mem.count < 6 && ctx.activeMin >= 75 && sinceMin('lastAt') >= 75) return say(pick(LINES.cat, rnd), 'stretch', { action: 'stretch', ms: 11000 });
       return null;
     case 'blob': // Trinken: alle 75 Minuten
       if (hours(8, 21) && mem.count < 8 && ctx.activeMin >= 10 && sinceMin('lastAt') >= 75) return say(pick(LINES.blob, rnd), 'happy');
@@ -192,11 +216,14 @@ function talentDue(pet, mem, ctx, rnd = Math.random) {
       if (min >= 20 * 60 && min < 22 * 60 && onceToday('evening')) return say(pick(LINES.owlEvening, rnd), 'talk', { ms: 9000 });
       if (hours(8, 20) && mem.count < 5 && ctx.activeMin >= 50 && sinceMin('lastAt') >= 50) return say(pick(LINES.owlBreak, rnd), 'talk');
       return null;
-    case 'frog': { // Wetter am Morgen, nur mit Ort
-      const w = t.place && ctx.weather && ctx.weather[t.place.toLowerCase()];
-      if (w && min >= 7 * 60 && min < 12 * 60 && onceToday('weather')) return say(weatherLine(w, t.place), 'happy', { ms: 12000 });
+    case 'frog': // Witz des Tages: einmal am Vormittag, einmal am Nachmittag (nicht zweimal derselbe)
+      if (ctx.activeMin >= 5 && ((hours(9, 12) && onceToday('jokeAm')) || (hours(14, 17) && onceToday('jokePm')))) {
+        let j = pick(JOKES, rnd);
+        if (j === mem.lastJoke) j = JOKES[(JOKES.indexOf(j) + 1) % JOKES.length];
+        mem.lastJoke = j; mem.jokes = (mem.jokes || 0) + 1;
+        return say(j, 'happy', { ms: 11000 });
+      }
       return null;
-    }
     case 'penguin': // schlaegt ab und zu eine Atem-Pause vor
       if (hours(10, 18) && mem.count < 2 && ctx.activeMin >= 120 && sinceMin('lastAt') >= 180) return say(pick(LINES.penguin, rnd), 'talk');
       return null;
@@ -258,7 +285,7 @@ const COMPANION = {
   bird: ['Eilmeldung: {active}! 📰', 'Neuigkeiten vom Bildschirmrand: Alles ruhig. Verdächtig ruhig. 🐦', 'Breaking News: Du machst das gut. Mehr in Kürze.', 'Exklusiv: Heute schon {events} Meldungen. Ich bleibe dran!', 'Wetter in Pet-Hausen: sonnig mit Aussicht auf Kekse. 🍪', 'Gerücht: Der Mauszeiger soll heute besonders flink sein.'],
   beau: ['✨ *zaubert ein kleines Funkeln* – für deine Konzentration.', 'Der Mond steht heute als {moon}. Ein guter Tag für kleine Wunder. 🌙', 'Mrrp. Mein Hut sagt, du schaffst das. Mein Hut irrt nie. 🎩', '🔮 Ich sehe … eine Pause in deiner Zukunft. Eine baldige.', 'Abrakadabra … Stress, verschwinde! ✨ Hat’s geklappt?'],
   fox: ['Psst. Ich hab einen Plan: erst das Wichtigste, dann Feierabend. 🦊', 'Kleiner Trick: Die schwerste Aufgabe zuerst – dann ist der Rest ein Spaziergang.', '{feierabend} Ich zähle mit. 🦊', 'Ich hab die To-do-Liste nicht versteckt. Ehrlich nicht. *schaut weg*', 'Schlau ist, wer Pausen macht, bevor er muss.'],
-  frog: ['Was quakt im Büro? Der Drucker! QUAK! 🐸', 'Warum sind Frösche so glücklich? Sie fressen, was sie stört! 🪰', '*hüpft* Bewegung ist alles! Steh mal kurz auf!', 'Ich bin kein Prinz. Aber küssen musst du mich trotzdem nicht. 🐸', 'Kennst du den? Ein Frosch geht in die Bar … und bestellt eine Fliege. Quak!'],
+  frog: ['Was quakt im Büro? Der Drucker! QUAK! 🐸', 'Warum sind Frösche so glücklich? Sie fressen, was sie stört! 🪰', 'Ich bin kein Prinz. Aber küssen musst du mich trotzdem nicht. 🐸', 'Kennst du den? Ein Frosch geht in die Bar … und bestellt eine Fliege. Quak!', 'Ich hab heute schon drei Witze erzählt. Gelacht hab nur ich. Perfekt! 🐸😂'],
   penguin: ['Atme ein. Atme aus. Fertig ist der Tag nicht – aber du bist okay. 🐧', 'Kein Stress. Eis schmilzt auch nicht schneller, wenn man es anschreit.', 'Ganz ruhig. Ein Schritt nach dem anderen. Watschel, watschel.', 'Schultern runter. Kiefer locker. So ist gut.', 'Das Leben ist wie Rutschen: Am besten entspannt.'],
   bunny: ['Es ist {time}! Schon {time}! Wo ist die Zeit hin?! 🐰', 'Ich hab das Gefühl, wir sind zu spät. Wofür, weiß ich nicht. Aber zu spät!', 'Tick, tack, tick, tack … 🐰⏰', 'Soll ich dir einen Timer stellen? Rechtsklick! Schnell! Bevor es zu spät ist!', 'Ich hoppel mal kurz eine Runde. Zur Beruhigung. 🐰'],
   panda: ['Mmmh … Nickerchen? Ein kleines? 🐼', '*kaut genüsslich Bambus* … Willst du auch? Nein? Mehr für mich.', 'Kein Stress. Morgen ist auch noch ein Tag. Und übermorgen.', 'Ich hab heute schon viel geschafft. Ich hab gesessen. Sehr gut gesessen.', 'Gemütlichkeit ist eine Kunst. Ich bin Künstler. 🎋'],
@@ -323,7 +350,9 @@ function companionDue(pet, mem, ctx, rnd = Math.random) {
   const now = ctx.now;
   const min = minOfDay(now);
   if (min < 8 * 60 || min >= 22 * 60) return null;
-  const sinceMin = mem.compAt ? (now - mem.compAt) / 60000 : Infinity;
+  // erster Begleiter-Spruch nach dem Start zu einer zufaelligen Zeit – sonst reden alle Pets gleichzeitig los
+  if (!mem.compAt) { mem.compAt = now.getTime() - rnd() * 20 * 60000; mem.compGap = 20 + rnd() * 15; }
+  const sinceMin = (now - mem.compAt) / 60000;
   // Huhu: mit Nook Quiz (alle ~35 Min), sonst Fakten (Begleiter alle ~30, mit anderer App alle ~90 Min)
   if (pet.species === 'owl') {
     const cards = pet.kind === 'nook' ? ctx.cards || [] : [];
@@ -455,9 +484,6 @@ function characterMoment(pet, mem, ctx, rnd) {
     case 'cat':
       if (ctx.activeMin >= 120 && (!mem.lastPetAt || now - mem.lastPetAt > 3 * 3600000) && once('offended')) return { text: 'Seit Stunden streichelt mich niemand. Ich bin beleidigt. 😾 … Das war ein Hinweis.', mood: 'sad', ms: 7000 };
       return null;
-    case 'frog':
-      if (rainy && min >= 7 * 60 && once('umbrella')) return { text: 'Regen! Ich hab meinen Schirm dabei. ☂️ Du hoffentlich auch! Quak!', mood: 'happy', ms: 6000, action: { prop: '☂️', ms: 3 * 3600000 } };
-      return null;
     default:
       return null;
   }
@@ -485,7 +511,7 @@ function companionInfo(pet, mem, ctx) {
     case 'beau': return `🌙 ${moonOf(ctx.now)}`;
     case 'fox': return `⏳ ${fillCompanion('{feierabend}', pet, mem, ctx).replace(/^Noch /, 'noch ')}`;
     case 'owl': return `📚 ${mem.facts || 0} Fakten heute`;
-    case 'frog': return `${w && !w.missing ? `🌡️ ${Math.round(w.min)}–${Math.round(w.max)} °C · ` : ''}🪰 ${mem.flies || 0} gefangen`;
+    case 'frog': return `😂 ${mem.jokes || 0} Witze · 🪰 ${mem.flies || 0} gefangen`;
     case 'penguin': return `🫧 Atem-Pausen heute: ${mem.breaths || 0}`;
     case 'bunny': return `⏰ ${hh}${mem.lockDay === dayOf(ctx.now) && mem.lockTotal ? ` · 🔒 ${fmtClock(mem.lockTotal)} gesperrt` : ''}`;
     case 'panda': return `💤 Nickerchen heute: ${mem.naps || 0}`;
@@ -524,4 +550,4 @@ const FOCUS_LINES = {
 };
 const TIMER_LINES = { set: (m) => `Okay! In ${m} Minuten sag ich Bescheid! Versprochen! ⏰🐰`, done: (m) => `ZEIT IST UM! ${m} Minuten sind vorbei! ⏰🐰` };
 
-module.exports = { lockLine, lottiPraise, weatherLook, weatherSay, fmtClock, COMPANION, FACTS, SCARED, companionDue, companionInfo, companionMode, moonOf, TALENTS, LINES, normalizeTalent, talentDue, weatherLine, shortEvent, BREATH, FOCUS, FOCUS_LINES, TIMER_LINES, hhmm, weekOf };
+module.exports = { lockLine, lottiPraise, weatherLook, weatherSay, fmtClock, COMPANION, FACTS, SCARED, companionDue, companionInfo, companionMode, moonOf, TALENTS, LINES, normalizeTalent, talentDue, JOKES, shortEvent, BREATH, FOCUS, FOCUS_LINES, TIMER_LINES, hhmm, weekOf };
