@@ -3,7 +3,7 @@
 // Eine Szene besteht aus Zeilen [Wer, Text, Stimmung?]:
 //   Wer      0, 1, 2 … (Rolle) oder 'all' (alle gleichzeitig)
 //   Text     Sprechblase; {0} {1} {2} … werden durch Namen ersetzt; null = nur die Aktion, keine Blase
-//   Stimmung talk (Standard) | happy (huepfen / Beau winkt) | sleep | alert | sad
+//   Stimmung talk (Standard) | happy (huepfen) | greet (winken) | sleep | alert | sad
 // need: Bedingungen je Rolle, z. B. [{ kind: 'nexus' }, { species: 'beau' }]; Rollen ohne Bedingung nimmt jedes Pet.
 // Zweier-Szenen haben zwei Rollen, Gruppen-Szenen so viele, wie sie Rollen brauchen (3, 4 …).
 

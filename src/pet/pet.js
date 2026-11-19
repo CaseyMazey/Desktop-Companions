@@ -37,7 +37,7 @@ function applyPet(p) {
   if (!moodTimer) setMood(mood);
 }
 
-const MOODS = ['idle', 'talk', 'happy', 'sad', 'alert', 'sleep', 'walk', 'drag'];
+const MOODS = ['idle', 'talk', 'happy', 'greet', 'sad', 'alert', 'sleep', 'walk', 'drag'];
 function setMood(m) {
   petEl.classList.remove(...MOODS);
   petEl.classList.add(dragging ? 'drag' : walking ? 'walk' : m);
@@ -77,6 +77,7 @@ function lookLoop() {
       petEl.classList.add('look');
       setTimeout(() => petEl.classList.remove('look'), 1200);
       if (Math.random() < 0.15) flash('happy', 900); // kleiner Freudenhuepfer zwischendurch
+      else if (pet && pet.species === 'beau' && Math.random() < 0.08) flash('greet', 1500); // Beau winkt ab und zu einfach so
     }
     lookLoop();
   }, 6000 + Math.random() * 9000);

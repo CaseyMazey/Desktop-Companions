@@ -75,9 +75,11 @@ body:has(#bubble.show) #name { opacity: 0 !important; }
 .fur { fill: #2a2433; stroke: #5b4f6e; stroke-width: 2.5; stroke-linejoin: round; }
 .sp-beau .tail { transform-origin: right bottom; }
 .sp-beau .wave { display: none; transform-box: fill-box; transform-origin: 0% 100%; }
-.happy .sp-beau .wave, .alert .sp-beau .wave { display: inline; animation: beau-wave .3s ease-in-out infinite alternate; }
-.happy .sp-beau .paw-r, .alert .sp-beau .paw-r { display: none; }
-#pet.happy:has(.sp-beau) #sprite { animation: none; }   /* Beau winkt statt zu huepfen */
+/* Winken ist eine eigene Bewegung (Stimmung greet); bei happy huepft Beau wie alle anderen */
+.greet .sp-beau .wave, .alert .sp-beau .wave { display: inline; animation: beau-wave .3s ease-in-out infinite alternate; }
+.greet .sp-beau .paw-r, .alert .sp-beau .paw-r { display: none; }
+.greet #sprite { animation: breathe 3.2s ease-in-out infinite; }
+.greet .limb-r, .greet .wing-r { animation: wave-r .25s ease-in-out infinite alternate; } /* andere Pets: winken mit einer Seite */
 @keyframes beau-wave { from { transform: rotate(-10deg); } to { transform: rotate(12deg); } }
 
 /* Zzz beim Schlafen */

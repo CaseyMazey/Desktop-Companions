@@ -129,7 +129,7 @@ function refreshPet(pet) {
 const publicPet = (p) => ({ id: p.id, name: p.name, species: p.species, color: p.color, size: p.size, muted: p.muted, kind: p.kind });
 
 // ---------- Sprechen ----------
-// mood: happy | sad | alert | talk | sleep; ms: wie lange die Blase steht; open: Klick auf die Blase oeffnet die App
+// mood: happy (huepfen) | greet (winken) | sad | alert | talk | sleep; ms: wie lange die Blase steht; open: Klick auf die Blase oeffnet die App
 function say(id, text, { ms, mood = 'talk', open = false } = {}) {
   const e = live.get(id);
   if (!e || !text) return;
@@ -409,7 +409,7 @@ function addPet(kind, extra) {
   createPetWindow(pet);
   save();
   updateTray();
-  setTimeout(() => say(pet.id, pet.species === 'beau' ? 'Mrrp! Ich bin Beau. 🎩 *winkt*' : `Hallo, ich bin ${pet.name}! 👋`, { mood: 'happy' }), 900);
+  setTimeout(() => say(pet.id, pet.species === 'beau' ? 'Mrrp! Ich bin Beau. 🎩 *winkt*' : `Hallo, ich bin ${pet.name}! 👋`, { mood: pet.species === 'beau' ? 'greet' : 'happy' }), 900);
   return pet;
 }
 function removePet(id) {
@@ -642,7 +642,7 @@ app.whenReady().then(() => {
   for (const pet of state.pets) createPetWindow(pet);
   if (!SMOKE) setTimeout(() => state.pets.forEach((p) => makeRoom(p)), 1500);
   // Beau begruesst dich beim Start und hebt die Pfote (Wunsch aus dem Beau-Theme)
-  if (!SMOKE) setTimeout(() => state.pets.filter((p) => p.species === 'beau' && !p.muted).forEach((p) => say(p.id, beauGreeting(), { mood: 'happy', ms: 6000 })), 2500);
+  if (!SMOKE) setTimeout(() => state.pets.filter((p) => p.species === 'beau' && !p.muted).forEach((p) => say(p.id, beauGreeting(), { mood: 'greet', ms: 6000 })), 2500);
   tray = new Tray(trayIcon);
   tray.setToolTip('Desktop Companions');
   tray.on('click', () => openSettings());
