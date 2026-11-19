@@ -52,7 +52,8 @@ function installHook(file, port) {
 // Hook-Daten von Claude Code -> Meldung fuer die Pets (null = nicht melden)
 function eventFromHook(h) {
   if (!h || typeof h !== 'object') return null;
-  const project = typeof h.cwd === 'string' ? path.basename(h.cwd.replace(/[\\/]+$/, '')).slice(0, 80) : '';
+  // Ordnername als Projekt – \ und / trennen, egal auf welchem System (path.basename kennt unter Linux kein \)
+  const project = typeof h.cwd === 'string' ? (h.cwd.replace(/[\\/]+$/, '').split(/[\\/]/).pop() || '').slice(0, 80) : '';
   if (h.hook_event_name === 'Stop') return { app: 'claude-code', type: 'task-done', project };
   if (h.hook_event_name === 'Notification') {
     const msg = typeof h.message === 'string' ? h.message : '';
