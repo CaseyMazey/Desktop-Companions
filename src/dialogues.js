@@ -114,4 +114,17 @@ function pickScene(pets, rand = Math.random, recent = []) {
   };
 }
 
-module.exports = { PAIR, GROUP, pickScene, rolesOf };
+// Was ein Pet sagt, wenn es eine Weile gestreichelt wird (je Tierart)
+const PETTED = {
+  cat: ['*schnurr* 😌', 'Mrrrr … genau da. 💕', '*schnurr schnurr*', 'Noch ein bisschen? 🥺'],
+  beau: ['*schnurr* 🎩', 'Mrrp … aber nicht den Hut! 😼', 'Ein Zauberer genießt still. *schnurr*', 'Genau hinterm Ohr. 💛'],
+  blob: ['Hihi, das kitzelt! 💚', '*wabbel* 😊', 'Ich werd ganz weich … noch weicher. 🫠', 'Mehr! 💕'],
+  ghost: ['Uuuh … das ist schön. 👻💜', 'Du kannst mich anfassen?! 🥹', '*schwebt glücklich*', 'Gruselig gemütlich. 💜'],
+  bird: ['Tschirp! 💙', '*plustert sich auf* 🪶', 'Piep piep … schön! 💙', 'Die Federn liegen jetzt perfekt. ✨'],
+};
+const pettedLine = (species, rnd = Math.random) => {
+  const list = PETTED[species] || PETTED.blob;
+  return list[Math.floor(rnd() * list.length)];
+};
+
+module.exports = { PAIR, GROUP, pickScene, rolesOf, PETTED, pettedLine };

@@ -105,11 +105,81 @@ function updateHover(x, y) {
   const now = !!(el && el.closest('.hit') && (el.closest('#pet') || bubble.classList.contains('show')));
   if (now !== over) { over = now; api.hover(now); }
 }
-document.addEventListener('mousemove', (e) => updateHover(e.clientX, e.clientY));
-document.addEventListener('mouseleave', () => { if (over && !dragging) { over = false; api.hover(false); } });
+document.addEventListener('mousemove', (e) => {
+  updateHover(e.clientX, e.clientY);
+  watchCursor(e.clientX, e.clientY);
+  strokeMove(e);
+});
+document.addEventListener('mouseleave', () => {
+  if (over && !dragging) { over = false; api.hover(false); }
+  if (cuddling) stopCuddle();
+});
+
+// ---------- Augen folgen der Maus (solange sie in der Naehe ist) ----------
+let watchTimer = null;
+const clamp = (v) => Math.max(-1, Math.min(1, v));
+function watchCursor(x, y) {
+  if (dragging) return;
+  const r = petEl.getBoundingClientRect();
+  let dx = x - (r.left + r.width / 2);
+  const dy = y - (r.top + r.height * 0.55);
+  if (flip.classList.contains('left')) dx = -dx; // Pet ist gespiegelt: Augen andersherum schieben
+  petEl.style.setProperty('--lx', `${(clamp(dx / 70) * 3.5).toFixed(2)}px`);
+  petEl.style.setProperty('--ly', `${(clamp(dy / 70) * 2.5).toFixed(2)}px`);
+  petEl.classList.add('watch');
+  clearTimeout(watchTimer);
+  watchTimer = setTimeout(() => petEl.classList.remove('watch'), 1400);
+}
+
+// ---------- Streicheln: Maus ohne Taste ueber dem Pet hin und her ----------
+const stroke = window.Stroke.createStroke();
+let cuddling = false;
+let cuddleStart = 0;
+let cuddleSaid = false;
+let cuddleTimer = null;
+function strokeMove(e) {
+  const onPet = !!document.elementFromPoint(e.clientX, e.clientY)?.closest('#pet');
+  if (!onPet || e.buttons || dragging) {
+    if (cuddling) stopCuddle(); else stroke.reset();
+    return;
+  }
+  if (stroke.move(e.clientX, performance.now()) && !cuddling) startCuddle();
+}
+function startCuddle() {
+  cuddling = true;
+  cuddleStart = performance.now();
+  cuddleSaid = false;
+  petEl.classList.add('cuddle');
+  api.petting(true);
+  let n = 0;
+  cuddleTimer = setInterval(() => {
+    const now = performance.now();
+    if (!stroke.tick(now)) { stopCuddle(); return; }
+    if (++n % 4 === 0) oneHeart();
+    // eine Weile gestreichelt: das Pet sagt etwas dazu (der Hauptprozess entscheidet, ob es gerade passt)
+    if (!cuddleSaid && now - cuddleStart > 2500) { cuddleSaid = true; api.petted(); }
+  }, 160);
+}
+function stopCuddle() {
+  if (!cuddling) return;
+  cuddling = false;
+  clearInterval(cuddleTimer);
+  stroke.reset();
+  petEl.classList.remove('cuddle');
+  api.petting(false);
+  if (mood !== 'sleep' && !moodTimer) flash('happy', 900); // zufriedener Huepfer zum Schluss
+}
+function oneHeart() {
+  const h = document.createElement('i');
+  h.textContent = ['💖', '💕', '💗'][Math.floor(Math.random() * 3)];
+  h.style.left = `${25 + Math.random() * 45}%`;
+  hearts.appendChild(h);
+  setTimeout(() => h.remove(), 1800);
+}
 
 petEl.addEventListener('pointerdown', (e) => {
   if (e.button !== 0) return;
+  if (cuddling) stopCuddle();
   petEl.setPointerCapture(e.pointerId);
   api.dragStart();
 });

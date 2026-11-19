@@ -7,7 +7,7 @@ const os = require('node:os');
 const http = require('node:http');
 const { APPS, SPECIES, BEAU } = require('./presets');
 const { createPet, normalizePet, normalizeState, dueReminder, pickMessage, neighborGroups, strollTarget, chatterDelay, freeSpot, KINDS } = require('./logic');
-const { pickScene } = require('./dialogues');
+const { pickScene, pettedLine } = require('./dialogues');
 const { startBridge, PORT } = require('./bridge');
 const { Updater } = require('./updater');
 
@@ -102,7 +102,7 @@ function createPetWindow(pet) {
   win.once('ready-to-show', () => { placeWin(pet.id, pet.x, pet.y); if (!hidden && !pet.hidden) win.showInactive(); });
   win.webContents.on('will-navigate', (e) => e.preventDefault());
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
-  const entry = { win, mem: {}, busyUntil: 0, dragging: null, walking: null, inTalk: false, pos: { x: pet.x, y: pet.y }, capturing: false };
+  const entry = { win, mem: {}, busyUntil: 0, dragging: null, walking: null, inTalk: false, petting: false, pettedAt: 0, pos: { x: pet.x, y: pet.y }, capturing: false };
   live.set(pet.id, entry);
   win.on('closed', () => { if (live.get(pet.id) === entry) live.delete(pet.id); });
   return entry;
@@ -198,6 +198,22 @@ ipcMain.on('pet:bubble-click', (ev, open) => {
   const pet = id && petById(id);
   if (pet && open) openApp(pet);
 });
+// Streicheln: solange es dauert, laeuft das Pet nicht weg, und Szenen/Erinnerungen warten
+ipcMain.on('pet:petting', (ev, on) => {
+  const [id, e] = entryOf(ev.sender);
+  if (!e) return;
+  e.petting = !!on;
+  if (on) stopWalk(id);
+  else e.busyUntil = Math.max(e.busyUntil, Date.now() + 2500); // kurz nachgeniessen
+});
+// eine Weile gestreichelt: hoechstens alle 30 Sekunden ein Spruch, nicht im Schlaf und nicht mitten in einer Szene
+ipcMain.on('pet:petted', (ev) => {
+  const [id, e] = entryOf(ev.sender);
+  const pet = id && petById(id);
+  if (!pet || pet.muted || e.inTalk || Date.now() - e.pettedAt < 30000) return;
+  e.pettedAt = Date.now();
+  say(id, pettedLine(pet.species), { mood: 'talk', ms: 3200 });
+});
 ipcMain.on('pet:context', (ev) => {
   const [id, e] = entryOf(ev.sender);
   const pet = id && petById(id);
@@ -286,7 +302,7 @@ function walkTo(pet, targetX, speed = 1.5, { setHome = false } = {}) {
 // Steht ein Pet auf einem anderen? Dann zur Seite gehen.
 function makeRoom(pet, prefer = 0) {
   const e = live.get(pet.id);
-  if (!e || e.dragging || e.walking) return;
+  if (!e || e.dragging || e.walking || e.petting) return;
   const [x, y] = posOf(pet.id);
   const nx = freeX(pet, x, y, prefer);
   if (nx !== x) walkTo(pet, nx, 2.5, { setHome: true });
@@ -297,7 +313,7 @@ function maybeWander() {
   if (hidden) return;
   for (const pet of state.pets) {
     const e = live.get(pet.id);
-    if (!e || pet.hidden || e.dragging || e.walking || e.inTalk) continue;
+    if (!e || pet.hidden || e.dragging || e.walking || e.inTalk || e.petting) continue;
     if (pet.muted || Date.now() < e.busyUntil || Math.random() > (pet.wander ? 0.18 : 0.14)) { makeRoom(pet); continue; }
     const [x, y] = posOf(pet.id);
     const [min, max] = xRange(pet, x, y);
@@ -344,7 +360,7 @@ function maybeChat(force = false) {
   const bounds = [];
   for (const pet of state.pets) {
     const e = live.get(pet.id);
-    if (!e || pet.muted || pet.hidden || e.dragging || Date.now() < e.busyUntil) continue;
+    if (!e || pet.muted || pet.hidden || e.dragging || e.petting || Date.now() < e.busyUntil) continue;
     const [x, y] = posOf(pet.id);
     const h = winHeight(pet);
     bounds.push({ id: pet.id, x, y: y + BUBBLE_H, width: W, height: h - BUBBLE_H });
@@ -373,7 +389,7 @@ function checkReminders() {
     if (!e || pet.hidden) continue;
     const text = e.mem.pending || dueReminder(pet, e.mem, now);
     if (!text) continue;
-    if (e.inTalk || e.dragging || Date.now() < e.busyUntil) { e.mem.pending = text; continue; } // gleich danach
+    if (e.inTalk || e.dragging || e.petting || Date.now() < e.busyUntil) { e.mem.pending = text; continue; } // gleich danach
     e.mem.pending = null;
     say(pet.id, text, { mood: 'alert', open: !!pet.target, ms: 12000 });
   }

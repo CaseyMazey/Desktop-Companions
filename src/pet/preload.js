@@ -7,5 +7,7 @@ contextBridge.exposeInMainWorld('petApi', {
   dragStart: () => ipcRenderer.send('pet:drag-start'),
   dragEnd: () => ipcRenderer.send('pet:drag-end'),
   context: () => ipcRenderer.send('pet:context'),
+  petting: (on) => ipcRenderer.send('pet:petting', !!on),
+  petted: () => ipcRenderer.send('pet:petted'),
   bubbleClick: (open) => ipcRenderer.send('pet:bubble-click', !!open),
 });
