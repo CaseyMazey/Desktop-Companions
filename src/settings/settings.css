@@ -25,7 +25,7 @@ main { flex: 1; overflow: auto; padding: 22px 28px; }
 #list li.is-hidden .mini, #list li.is-hidden .meta { opacity: .45; }
 #list li.is-hidden .eye-btn { color: var(--accent); }
 .add { display: flex; gap: 6px; }
-.add select { flex: 1; min-width: 0; }
+.add button { flex: 1; }
 .global { border-top: 1px solid var(--line); padding-top: 12px; display: flex; flex-direction: column; gap: 8px; margin-top: auto; }
 .updates { border-top: 1px solid var(--line); padding-top: 12px; display: flex; flex-direction: column; gap: 6px; }
 .updates .hint { margin: 0; }
@@ -47,6 +47,8 @@ header { display: flex; align-items: center; gap: 16px; margin-bottom: 14px; }
 .stripe { stroke: var(--c-dark); }
 .fur { fill: #2a2433; stroke: #5b4f6e; stroke-width: 2.5; stroke-linejoin: round; }
 .wave { display: none; }
+.dark { fill: var(--c-dark); }
+.disc { fill: #fff8ec; stroke: var(--c-dark); stroke-width: 2.5; }
 .cheek { fill: #fb7185; opacity: .45; }
 .eyes-closed, .eyes-happy, .mouth, .beak-open { display: none; }
 .mouth-idle { display: inline; }
@@ -62,3 +64,42 @@ label.check { flex-direction: row; align-items: center; gap: 8px; color: var(--t
 .inline input { flex: 1; min-width: 0; }
 code { background: #322d45; padding: 0 4px; border-radius: 4px; }
 footer { display: flex; justify-content: space-between; align-items: center; }
+
+/* Claude-Code-Hook */
+.hook { border: 1px dashed var(--line); border-radius: 10px; padding: 10px 12px; }
+.hook pre { margin: 6px 0 8px; padding: 8px 10px; background: #15131d; border-radius: 8px; font: 12px/1.4 Consolas, "Cascadia Mono", monospace;
+  white-space: pre-wrap; word-break: break-all; max-height: 180px; overflow: auto; }
+
+/* ---------- Neues Pet (Dialog): erst Tier, dann Verbindung ---------- */
+dialog#create { width: min(860px, 94vw); max-height: 90vh; padding: 0; border: 1px solid var(--line); border-radius: 16px;
+  background: var(--panel); color: var(--text); box-shadow: 0 20px 60px rgba(0,0,0,.5); overflow: hidden; }
+dialog#create::backdrop { background: rgba(10, 8, 18, .6); }
+#create-form { display: flex; flex-direction: column; max-height: 90vh; }
+.create-head { margin: 0; padding: 16px 20px 10px; gap: 14px; }
+.create-head h2 { font-size: 18px; margin: 0; }
+.steps { list-style: none; display: flex; gap: 6px; margin: 0; padding: 0; flex: 1; }
+.steps li { font-size: 12.5px; padding: 3px 10px; border-radius: 999px; background: #1b1925; color: var(--muted); border: 1px solid var(--line); }
+.steps li.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.steps li.done { color: var(--text); border-color: var(--accent); }
+.x { background: transparent; border-color: transparent; font-size: 16px; padding: 4px 8px; }
+#pane-1, #pane-2 { padding: 0 20px 12px; overflow: auto; }
+#pane-2 h3 { font-size: 13px; color: var(--muted); margin: 12px 0 6px; font-weight: 600; }
+.cards { display: grid; gap: 8px; }
+.cards.animals { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); }
+.cards.presets { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+.card { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 8px; border-radius: 12px; background: #1b1925; text-align: center; }
+.card:hover { background: #2a2639; }
+.card[aria-checked="true"] { border-color: var(--accent); background: #332c4d; box-shadow: 0 0 0 1px var(--accent) inset; }
+.card .art { width: 64px; height: 64px; }
+.card .art svg { width: 100%; height: 100%; overflow: visible; }
+.card-label { font-size: 13px; font-weight: 600; }
+.card.preset { flex-direction: row; flex-wrap: wrap; align-items: center; text-align: left; gap: 2px 8px; padding: 10px 12px; }
+.card.preset .icon { font-size: 20px; width: 26px; text-align: center; }
+.card.preset small { flex-basis: 100%; color: var(--muted); font-size: 11.5px; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.create-foot { justify-content: flex-start; gap: 10px; padding: 12px 20px 16px; border-top: 1px solid var(--line); }
+.create-foot .mini { width: 40px; height: 40px; flex: none; }
+.create-foot .mini svg { width: 100%; height: 100%; overflow: visible; }
+.create-foot label { flex-direction: row; align-items: center; gap: 8px; max-width: 260px; }
+.create-foot label input { flex: 1; min-width: 0; }
+.create-foot button:disabled { opacity: .45; cursor: default; }
+.create-foot #create-summary { margin: 0 0 0 auto; }   /* Knoepfe bleiben rechts stehen, auch wenn der Text erscheint */

@@ -16,4 +16,6 @@ contextBridge.exposeInMainWorld('pets', {
   updateInstall: () => ipcRenderer.invoke('settings:update-install'),
   onState: (cb) => ipcRenderer.on('settings:state', (_e, s) => cb(s)),
   onFocus: (cb) => ipcRenderer.on('settings:focus', (_e, id) => cb(id)),
+  onCreate: (cb) => ipcRenderer.on('settings:create', () => cb()),
+  copy: (text) => ipcRenderer.invoke('settings:copy', String(text).slice(0, 4000)),
 });

@@ -89,10 +89,17 @@ Beim ersten Start legt Desktop Companions für jede gefundene App (NEXUS, DAN, N
 | **NEXUS** | meldet, wenn ein Auftrag in 3C fertig ist, schiefging oder Claude eine Entscheidung braucht |
 | **DAN** | erinnert Mo–Fr stündlich (7:30–16:30) daran aufzuschreiben, was du gerade machst; um 15:45 die Feierabend-Erinnerung |
 | **Nook** | sagt alle 45 Minuten etwas Nettes oder erinnert an Pausen und Wasser; um 12:30 Mittagspause |
-| **Beau** 🎩 | schwarzer Kater mit Hexenhut aus dem Beau-Theme von Nook: begrüßt dich beim Start und winkt (Tray → Neues Pet → Beau) |
+| **3C** | wie NEXUS, aber nur die Meldungen aus 3C: fertig, schiefgegangen, Entscheidung nötig |
+| **Claude Code** | sagt Bescheid, wenn Claude Code fertig ist oder deine Entscheidung braucht (einmal den Hook aus den Einstellungen in `~/.claude/settings.json` eintragen) |
+| **Claude · ChatGPT** | öffnet Claude (Desktop-App oder claude.ai) bzw. ChatGPT |
+| **Gmail · Outlook** | öffnet die Mails und erinnert werktags ab und zu daran |
+| **Google Kalender · Teams** | Kalender: fragt werktags um 8:45, was heute ansteht · Teams: öffnet Teams |
+| **Spotify · Notion · Obsidian** | öffnet die App (sonst die Webseite) |
 | **Eigene App** | öffnet ein beliebiges Programm, eine Datei oder eine `https://`-Adresse |
 
-Alles lässt sich pro Pet in den Einstellungen ändern: Tier (Geist, Katze, Schleim, Vogel oder Beau, der schwarze Kater mit Hexenhut), Farbe, Größe, Sprüche, Abstand, Uhrzeiten und ob es herumläuft.
+**Neues Pet anlegen:** *+ Neues Pet* (Einstellungen oder Tray) → erst das **Tier** wählen, dann die **Verbindung**. Beau 🎩 ist ein eigenes Tier: mit Nook bekommt er seine eigenen Sprüche und begrüßt dich beim Start.
+
+Alles lässt sich pro Pet in den Einstellungen ändern: Tier (Geist, Katze, Schleim, Vogel, Beau – der schwarze Kater mit Hexenhut –, Fuchs, Eule, Frosch, Pinguin, Hase, Panda, Axolotl, kleiner Drache, Pilz oder Roboter), Farbe, Größe, Sprüche, Abstand, Uhrzeiten und ob es herumläuft.
 
 ## Für Entwickler
 

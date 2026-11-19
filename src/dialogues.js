@@ -121,6 +121,16 @@ const PETTED = {
   blob: ['Hihi, das kitzelt! 💚', '*wabbel* 😊', 'Ich werd ganz weich … noch weicher. 🫠', 'Mehr! 💕'],
   ghost: ['Uuuh … das ist schön. 👻💜', 'Du kannst mich anfassen?! 🥹', '*schwebt glücklich*', 'Gruselig gemütlich. 💜'],
   bird: ['Tschirp! 💙', '*plustert sich auf* 🪶', 'Piep piep … schön! 💙', 'Die Federn liegen jetzt perfekt. ✨'],
+  fox: ['*wedelt mit dem buschigen Schwanz* 🦊', 'Hinter den Ohren, bitte! 🧡', 'Mmmh, so flauschig fühl ich mich gleich doppelt.', '*kuschelt sich ein*'],
+  owl: ['Huhu! 🦉', '*plustert die Federn auf*', 'Sehr weise von dir, mich zu streicheln.', 'Uhuu … gemütlich. 🌙'],
+  frog: ['Quak! 💚', '*quakt zufrieden*', 'Schön glitschig, oder? 🐸', 'Ich könnte vor Freude hüpfen!'],
+  penguin: ['*watschelt glücklich* 🐧', 'Schön warm, deine Hand!', 'Noch mal! *flattert*', 'Ich bin ganz gerührt. 💙'],
+  bunny: ['*wackelt mit den Ohren* 🐰', 'Stups! 💗', 'So weich, oder? Hehe.', '*hoppelt vor Freude*'],
+  panda: ['*kaut glücklich* 🎋', 'Mehr Kuscheln, weniger Bambus. Okay, beides.', '*purzelt fast um* 🐼', 'Hmmm … flauschig.'],
+  axolotl: ['*Kiemen wedeln* 💗', 'Ich lächle sowieso immer, aber jetzt noch mehr!', 'Blubb … schön. 🫧', 'Du bist mein Lieblingsmensch.'],
+  dragon: ['*pustet Funken* ✨🔥', 'Ich bin gefährlich! … okay, noch ein bisschen.', 'Rrrr … *schnurr wie ein Drache*', 'Das Feuer in mir ist ganz warm. 💚'],
+  mushroom: ['*wiegt sich glücklich* 🍄', 'Hihi, mein Hut wackelt!', 'Ich wachse vor Freude. 🌱', 'Pilz-Gefühle: sehr gut.'],
+  robot: ['Bip bop! 💙', 'STREICHELN ERKANNT. FREUDE: 100 %. 🤖', '*Lampe blinkt fröhlich*', 'Systeme laufen … gemütlich.'],
 };
 const pettedLine = (species, rnd = Math.random) => {
   const list = PETTED[species] || PETTED.blob;

@@ -1,12 +1,12 @@
 // Desktop Companions – Hauptprozess: ein durchsichtiges, immer sichtbares Fenster pro Pet, Tray-Menue, Einstellungen,
 // Erinnerungen, Gespraeche zwischen benachbarten Pets und der lokale Empfaenger fuer NEXUS & Co.
-const { app, BrowserWindow, ipcMain, screen, Menu, Tray, nativeImage, shell, dialog, desktopCapturer } = require('electron');
+const { app, BrowserWindow, ipcMain, screen, Menu, Tray, nativeImage, shell, dialog, desktopCapturer, clipboard } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
 const os = require('node:os');
 const http = require('node:http');
-const { APPS, SPECIES, BEAU } = require('./presets');
-const { createPet, normalizePet, normalizeState, dueReminder, pickMessage, neighborGroups, strollTarget, chatterDelay, freeSpot, KINDS } = require('./logic');
+const { APPS, SPECIES, BEAU, GROUPS } = require('./presets');
+const { createPet, createChosenPet, petsForEvent, normalizePet, normalizeState, dueReminder, pickMessage, neighborGroups, strollTarget, chatterDelay, freeSpot, KINDS } = require('./logic');
 const { pickScene, pettedLine } = require('./dialogues');
 const { startBridge, PORT } = require('./bridge');
 const { Updater } = require('./updater');
@@ -397,11 +397,12 @@ function checkReminders() {
 
 // ---------- Meldungen anderer Apps ----------
 function onAppEvent(ev) {
-  const targets = state.pets.filter((p) => p.events && !p.hidden && (ev.pet ? p.id === ev.pet : p.kind === ev.app));
+  const targets = petsForEvent(state.pets, ev);
   const where = ev.project ? ` (${ev.project})` : '';
   for (const pet of targets) {
-    if (ev.type === 'task-done') say(pet.id, `✅ Fertig in 3C${where}! Klick mich zum Ansehen.`, { mood: 'happy', open: true, ms: 20000 });
-    else if (ev.type === 'task-error') say(pet.id, `⚠️ In 3C ist etwas schiefgelaufen${where}.`, { mood: 'sad', open: true, ms: 20000 });
+    const src = APPS[pet.kind].source || (['custom', 'none'].includes(pet.kind) ? 'der App' : APPS[pet.kind].label); // "3C", "Claude Code", …
+    if (ev.type === 'task-done') say(pet.id, `✅ Fertig in ${src}${where}! Klick mich zum Ansehen.`, { mood: 'happy', open: true, ms: 20000 });
+    else if (ev.type === 'task-error') say(pet.id, `⚠️ In ${src} ist etwas schiefgelaufen${where}.`, { mood: 'sad', open: true, ms: 20000 });
     else if (ev.type === 'decision') say(pet.id, `❓ Claude braucht deine Entscheidung${where}${ev.tool ? ': ' + ev.tool : ''}`, { mood: 'alert', open: true, ms: 30000 });
     else say(pet.id, ev.text, { mood: 'happy', open: !!pet.target });
   }
@@ -420,7 +421,16 @@ function beauGreeting() {
 }
 function addPet(kind, extra) {
   if (kind === 'beau') { kind = BEAU.kind; extra = { ...beauExtra(), ...extra }; }
-  const pet = createPet(kind, extra);
+  return placeNewPet(createPet(kind, extra));
+}
+// Auswahl aus den Einstellungen: erst das Tier, dann die Verbindung (Preset)
+function addChosenPet({ kind, species, name } = {}) {
+  const pet = createChosenPet(kind, species, name);
+  // Beau mit Nook bekommt seine eigenen Sprueche (wie bisher "Beau 🎩 (mit Nook)")
+  if (pet.species === 'beau' && pet.kind === BEAU.kind) pet.reminders.messages = BEAU.messages.slice();
+  return placeNewPet(pet);
+}
+function placeNewPet(pet) {
   state.pets.push(pet);
   createPetWindow(pet);
   save();
@@ -438,14 +448,19 @@ function removePet(id) {
 }
 
 // ---------- Einstellungen ----------
-function openSettings(focusId) {
-  if (settingsWin && !settingsWin.isDestroyed()) { settingsWin.show(); settingsWin.focus(); if (focusId) settingsWin.webContents.send('settings:focus', focusId); return; }
+function openSettings(focusId, { create = false } = {}) {
+  if (settingsWin && !settingsWin.isDestroyed()) {
+    settingsWin.show(); settingsWin.focus();
+    if (focusId) settingsWin.webContents.send('settings:focus', focusId);
+    if (create) settingsWin.webContents.send('settings:create');
+    return;
+  }
   settingsWin = new BrowserWindow({
     width: 940, height: 680, minWidth: 720, minHeight: 500, title: 'Desktop Companions – Einstellungen', icon, autoHideMenuBar: true, show: false,
     backgroundColor: '#1d1b26',
     webPreferences: { preload: path.join(__dirname, 'settings', 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true },
   });
-  settingsWin.loadFile(path.join(__dirname, 'settings', 'settings.html'), { query: focusId ? { focus: focusId } : {} });
+  settingsWin.loadFile(path.join(__dirname, 'settings', 'settings.html'), { query: { ...(focusId ? { focus: focusId } : {}), ...(create ? { create: '1' } : {}) } });
   settingsWin.once('ready-to-show', () => settingsWin.show());
   settingsWin.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   settingsWin.webContents.on('will-navigate', (e) => e.preventDefault());
@@ -455,8 +470,10 @@ const sendSettings = () => settingsWin && !settingsWin.isDestroyed() && settings
 function settingsPayload() {
   return {
     state,
-    apps: Object.fromEntries(KINDS.map((k) => [k, { label: APPS[k].label, hint: APPS[k].hint, target: APPS[k].target() }])),
+    apps: Object.fromEntries(KINDS.map((k) => [k, { label: APPS[k].label, hint: APPS[k].hint, target: APPS[k].target(), group: APPS[k].group, icon: APPS[k].icon, eventsLabel: APPS[k].eventsLabel }])),
+    groups: GROUPS,
     species: Object.fromEntries(Object.entries(SPECIES).map(([k, v]) => [k, v.label])),
+    speciesColors: Object.fromEntries(Object.entries(SPECIES).map(([k, v]) => [k, v.color])),
     port: PORT,
     packaged: app.isPackaged,
     version: app.getVersion(),
@@ -481,7 +498,10 @@ ipcMain.handle('settings:save-pet', (_e, data) => {
   updateTray();
   return pet;
 });
-ipcMain.handle('settings:add-pet', (_e, kind) => addPet(KINDS.includes(kind) || kind === 'beau' ? kind : 'none'));
+ipcMain.handle('settings:add-pet', (_e, choice) => (typeof choice === 'object' && choice
+  ? addChosenPet({ kind: String(choice.kind || ''), species: String(choice.species || ''), name: String(choice.name || '') })
+  : addPet(KINDS.includes(choice) || choice === 'beau' ? choice : 'none')));
+ipcMain.handle('settings:copy', (_e, text) => { clipboard.writeText(String(text).slice(0, 4000)); return true; });
 ipcMain.handle('settings:remove-pet', (_e, id) => { removePet(id); return true; });
 ipcMain.handle('settings:test-pet', (_e, id) => { const p = petById(id); if (p) speakNow(p); });
 ipcMain.handle('settings:open-app', (_e, id) => { const p = petById(id); if (p) openApp(p); });
@@ -546,11 +566,7 @@ function updateTray() {
   if (!tray) return;
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: hidden ? 'Pets zeigen' : 'Pets verstecken', click: toggleHidden },
-    { label: 'Neues Pet', submenu: [
-      ...KINDS.map((k) => ({ label: k === 'none' ? 'Ohne App' : `Verbunden mit ${APPS[k].label}`, click: () => addPet(k) })),
-      { type: 'separator' },
-      { label: 'Beau 🎩 (mit Nook)', click: () => addPet('beau') },
-    ] },
+    { label: 'Neues Pet …', click: () => openSettings(null, { create: true }) }, // erst Tier, dann Verbindung
     { label: 'Plaudern lassen', enabled: state.pets.length > 1, click: () => maybeChat(true) },
     { label: 'Alle Pets frei wandern lassen', type: 'checkbox', checked: state.pets.length > 0 && state.pets.every((p) => p.wander), click: (item) => setAllWander(item.checked) },
     { label: 'Einstellungen …', click: () => openSettings() },

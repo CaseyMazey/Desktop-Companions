@@ -11,14 +11,6 @@
     <h1>🐾 Desktop Companions</h1>
     <ul id="list"></ul>
     <div class="add">
-      <select id="add-kind" aria-label="App für das neue Pet">
-        <option value="nexus">mit NEXUS</option>
-        <option value="dan">mit DAN</option>
-        <option value="nook">mit Nook</option>
-        <option value="custom">mit eigener App</option>
-        <option value="none">ohne App</option>
-        <option value="beau">Beau 🎩 (mit Nook)</option>
-      </select>
       <button id="add" class="primary">+ Neues Pet</button>
     </div>
     <section class="global">
@@ -70,16 +62,19 @@
       <legend>Verbindung</legend>
       <div class="row">
         <label>Verbunden mit
-          <select id="f-kind">
-            <option value="nexus">NEXUS</option><option value="dan">DAN</option><option value="nook">Nook</option>
-            <option value="custom">Eigene App</option><option value="none">Keine</option>
-          </select>
+          <select id="f-kind"></select>
         </label>
         <label class="grow">Öffnet beim Klick (Programm, Datei oder https://-Adresse)
           <span class="inline"><input id="f-target" spellcheck="false"><button id="pick">Durchsuchen …</button><button id="open">Testen</button></span>
         </label>
       </div>
       <label class="check"><input type="checkbox" id="f-events"> <span id="events-label">Meldungen der App anzeigen</span></label>
+      <div class="hook" id="hook-box" hidden>
+        <p class="hint"><strong>Einmal einrichten:</strong> Damit Claude Code Bescheid sagt, diesen Hook in die Datei
+          <code>.claude/settings.json</code> in deinem Benutzerordner eintragen (hast du dort schon <code>"hooks"</code>, nur <code>Stop</code> und <code>Notification</code> ergänzen).</p>
+        <pre id="hook-code"></pre>
+        <button id="hook-copy" type="button">Kopieren</button> <span class="hint" id="hook-copied"></span>
+      </div>
     </fieldset>
 
     <fieldset>
@@ -104,6 +99,36 @@
       <button id="remove" class="danger">Pet entfernen</button>
     </footer>
   </template>
+
+  <!-- Neues Pet: erst das Tier, dann die Verbindung (Preset) -->
+  <dialog id="create" aria-labelledby="create-title">
+    <form method="dialog" id="create-form">
+      <header class="create-head">
+        <h2 id="create-title">Neues Pet</h2>
+        <ol class="steps" aria-label="Schritte">
+          <li id="step-1" class="on">1 · Tier</li>
+          <li id="step-2">2 · Verbindung</li>
+        </ol>
+        <button type="button" class="x" id="create-close" aria-label="Schließen">✕</button>
+      </header>
+      <section id="pane-1">
+        <p class="hint">Welches Tier soll es sein? Farbe und Größe kannst du danach noch ändern.</p>
+        <div class="cards animals" id="animal-cards" role="radiogroup" aria-label="Tier"></div>
+      </section>
+      <section id="pane-2" hidden>
+        <p class="hint">Womit soll <strong id="chosen-animal"></strong> verbunden sein? Ein Klick aufs Pet öffnet dann diese App.</p>
+        <div id="preset-groups"></div>
+      </section>
+      <footer class="create-foot">
+        <div class="mini" id="create-preview" aria-hidden="true"></div>
+        <label class="grow">Name <input id="create-name" maxlength="24"></label>
+        <span class="hint" id="create-summary"></span>
+        <button type="button" id="create-back" hidden>Zurück</button>
+        <button type="button" id="create-next" class="primary" disabled>Weiter</button>
+        <button type="button" id="create-ok" class="primary" hidden disabled>Pet erstellen</button>
+      </footer>
+    </form>
+  </dialog>
 
   <script src="../pet/species.js"></script>
   <script src="settings.js"></script>

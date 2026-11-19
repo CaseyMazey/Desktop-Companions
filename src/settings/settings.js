@@ -6,13 +6,7 @@ let data = null;       // { state, apps, species, port, packaged }
 let current = null;    // id des gewaehlten Pets
 let saveTimer = null;
 
-const EVENT_LABEL = {
-  nexus: 'Melden, wenn ein Auftrag in 3C fertig ist oder Claude eine Entscheidung braucht',
-  dan: 'Meldungen von DAN anzeigen (sobald DAN welche schickt)',
-  nook: 'Meldungen von Nook anzeigen (sobald Nook welche schickt)',
-  custom: 'Meldungen der App anzeigen (über die lokale Schnittstelle)',
-  none: 'Meldungen anzeigen',
-};
+
 
 function darker(hex, f = 0.68) {
   const n = parseInt(hex.slice(1), 16);
@@ -80,8 +74,10 @@ function renderEditor() {
   main.replaceChildren($('tpl-editor').content.cloneNode(true));
   const sp = $('f-species');
   for (const [k, label] of Object.entries(data.species)) sp.add(new window.Option(label, k));
+  fillKinds($('f-kind'));
   $('f-name').value = p.name;
   sp.value = p.species;
+  sp.dataset.last = p.species;
   $('f-color').value = p.color;
   $('f-size').value = p.size;
   $('f-wander').checked = p.wander;
@@ -89,7 +85,8 @@ function renderEditor() {
   $('f-kind').value = p.kind;
   $('f-target').value = p.target;
   $('f-events').checked = p.events;
-  $('events-label').textContent = EVENT_LABEL[p.kind];
+  $('events-label').textContent = data.apps[p.kind].eventsLabel || 'Meldungen anzeigen';
+  showHook(p.kind);
   $('kind-hint').textContent = data.apps[p.kind].hint;
   const r = p.reminders;
   $('r-enabled').checked = r.enabled;
@@ -148,6 +145,10 @@ function collect() {
 function scheduleSave() {
   const p = pet();
   if (p) {
+    // anderes Tier gewaehlt: dessen Standardfarbe uebernehmen (danach frei aenderbar)
+    const sp = $('f-species');
+    if (sp.dataset.last && sp.dataset.last !== sp.value && data.speciesColors) $('f-color').value = data.speciesColors[sp.value] || $('f-color').value;
+    sp.dataset.last = sp.value;
     const c = collect();
     drawPet($('preview'), { ...p, species: c.species, color: c.color });
     $('f-color').closest('label').hidden = c.species === 'beau';
@@ -179,6 +180,118 @@ async function changeKind() {
   data.state.pets[data.state.pets.indexOf(p)] = saved;
   renderList();
   renderEditor();
+}
+
+// Alle Presets als Auswahl, nach Abschnitten gruppiert
+function fillKinds(sel) {
+  for (const [g, title] of Object.entries(data.groups || {})) {
+    const og = document.createElement('optgroup');
+    og.label = title;
+    for (const [k, a] of Object.entries(data.apps)) if (a.group === g) og.appendChild(new window.Option(`${a.icon || ''} ${a.label}`.trim(), k));
+    if (og.children.length) sel.appendChild(og);
+  }
+}
+
+// Claude Code: Hook zum Eintragen in ~/.claude/settings.json (schickt "fertig" und "braucht dich" an die lokale Schnittstelle)
+function hookJson() {
+  const cmd = (type) => `curl -s -m 2 -X POST http://127.0.0.1:${data.port}/event -H "Content-Type: application/json" -d '{"app":"claude-code","type":"${type}"}'`;
+  const entry = (type) => [{ hooks: [{ type: 'command', command: cmd(type) }] }];
+  return JSON.stringify({ hooks: { Stop: entry('task-done'), Notification: entry('decision') } }, null, 2);
+}
+function showHook(kind) {
+  const box = $('hook-box');
+  box.hidden = kind !== 'claudecode';
+  if (box.hidden) return;
+  $('hook-code').textContent = hookJson();
+  $('hook-copy').onclick = async () => {
+    await api.copy(hookJson());
+    $('hook-copied').textContent = 'Kopiert ✓';
+    setTimeout(() => { if ($('hook-copied')) $('hook-copied').textContent = ''; }, 1500);
+  };
+}
+
+// ---------- Neues Pet: erst das Tier, dann die Verbindung ----------
+const choice = { species: null, kind: null, nameTouched: false };
+const speciesName = (sp) => (data.species[sp] || '').replace(/\s*\(.*\)$/, '');
+function card(cls, label, selected, onPick) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = `card ${cls}`;
+  b.setAttribute('role', 'radio');
+  b.setAttribute('aria-checked', String(selected));
+  b.onclick = onPick;
+  b.ondblclick = () => { onPick(); (choice.kind ? $('create-ok') : $('create-next')).click(); };
+  const t = document.createElement('span');
+  t.className = 'card-label';
+  t.textContent = label;
+  b.appendChild(t);
+  return b;
+}
+function renderAnimals() {
+  const box = $('animal-cards');
+  box.replaceChildren();
+  for (const [sp, label] of Object.entries(data.species)) {
+    const b = card('animal', sp === 'beau' ? 'Beau 🎩' : label.replace(/^(.*?)\s*\((.*)\)$/, '$2'), choice.species === sp, () => { choice.species = sp; renderAnimals(); updateCreate(); });
+    const art = document.createElement('div');
+    art.className = 'art';
+    drawPet(art, { species: sp, color: data.speciesColors[sp] });
+    b.prepend(art);
+    box.appendChild(b);
+  }
+}
+function renderPresets() {
+  const box = $('preset-groups');
+  box.replaceChildren();
+  for (const [g, title] of Object.entries(data.groups)) {
+    const kinds = Object.entries(data.apps).filter(([, a]) => a.group === g);
+    if (!kinds.length) continue;
+    const h = document.createElement('h3'); h.textContent = title;
+    const grid = document.createElement('div'); grid.className = 'cards presets'; grid.setAttribute('role', 'radiogroup'); grid.setAttribute('aria-label', title);
+    for (const [k, a] of kinds) {
+      const b = card('preset', k === 'none' ? 'Ohne App' : a.label, choice.kind === k, () => { choice.kind = k; renderPresets(); updateCreate(); });
+      const icon = document.createElement('span'); icon.className = 'icon'; icon.textContent = a.icon || '•';
+      const hint = document.createElement('small'); hint.textContent = a.hint;
+      b.prepend(icon); b.appendChild(hint);
+      grid.appendChild(b);
+    }
+    box.append(h, grid);
+  }
+}
+function showStep(n) {
+  $('pane-1').hidden = n !== 1; $('pane-2').hidden = n !== 2;
+  $('step-1').className = n === 1 ? 'on' : 'done'; $('step-2').className = n === 2 ? 'on' : '';
+  $('create-back').hidden = n !== 2; $('create-next').hidden = n !== 1; $('create-ok').hidden = n !== 2;
+  if (n === 2) { $('chosen-animal').textContent = $('create-name').value || speciesName(choice.species); renderPresets(); }
+}
+function updateCreate() {
+  if (choice.species && !choice.nameTouched) $('create-name').value = speciesName(choice.species);
+  if (choice.species) drawPet($('create-preview'), { species: choice.species, color: data.speciesColors[choice.species] });
+  else $('create-preview').replaceChildren();
+  const a = choice.kind && data.apps[choice.kind];
+  $('create-summary').textContent = a ? (choice.kind === 'none' ? 'ohne App' : `mit ${a.label}`) : '';
+  $('create-next').disabled = !choice.species;
+  $('create-ok').disabled = !(choice.species && choice.kind);
+}
+function openCreate() {
+  Object.assign(choice, { species: null, kind: null, nameTouched: false });
+  $('create-name').value = '';
+  renderAnimals();
+  showStep(1);
+  updateCreate();
+  if (!$('create').open) $('create').showModal();
+}
+function initCreate() {
+  $('create-name').oninput = () => { choice.nameTouched = !!$('create-name').value; };
+  $('create-next').onclick = () => { if (choice.species) showStep(2); };
+  $('create-back').onclick = () => showStep(1);
+  $('create-close').onclick = () => $('create').close();
+  $('create-ok').onclick = async () => {
+    if (!(choice.species && choice.kind)) return;
+    const p = await api.addPet({ kind: choice.kind, species: choice.species, name: $('create-name').value });
+    $('create').close();
+    data = await api.get();
+    select(p.id);
+  };
 }
 
 // ---------- Updates ----------
@@ -213,11 +326,8 @@ async function init() {
     const ok = await api.chatNow();
     if (!ok) window.alert('Stell zwei Pets nebeneinander (höchstens etwa eine Pet-Breite Abstand), dann plaudern sie.');
   };
-  $('add').onclick = async () => {
-    const p = await api.addPet($('add-kind').value);
-    data = await api.get();
-    select(p.id);
-  };
+  initCreate();
+  $('add').onclick = openCreate;
   $('auto-update').checked = data.state.settings.autoUpdate;
   $('auto-update').disabled = !data.packaged;
   $('auto-update').onchange = () => api.saveGlobal({ autoUpdate: $('auto-update').checked });
@@ -228,6 +338,7 @@ async function init() {
   renderUpdate();
   renderList();
   renderEditor();
+  if (new URLSearchParams(window.location.search).get('create')) openCreate(); // Tray: "Neues Pet …"
 }
 
 api.onState((s) => {
@@ -238,4 +349,5 @@ api.onState((s) => {
   renderEditor();
 });
 api.onFocus((id) => select(id));
+api.onCreate(() => openCreate());
 init();

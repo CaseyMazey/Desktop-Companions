@@ -52,7 +52,7 @@ function flash(m, ms) {
 function sprinkleHearts() {
   for (let i = 0; i < 3; i++) {
     const h = document.createElement('i');
-    h.textContent = ['💛', '✨', '💖'][i];
+    h.textContent = (pet && pet.species === 'dragon' ? ['✨', '🔥', '✨'] : ['💛', '✨', '💖'])[i]; // Drache pustet Funken
     h.style.left = `${20 + i * 28}%`;
     h.style.animationDelay = `${i * 0.18}s`;
     hearts.appendChild(h);
@@ -171,7 +171,7 @@ function stopCuddle() {
 }
 function oneHeart() {
   const h = document.createElement('i');
-  h.textContent = ['💖', '💕', '💗'][Math.floor(Math.random() * 3)];
+  h.textContent = (pet && pet.species === 'dragon' ? ['✨', '🔥', '✨'] : ['💖', '💕', '💗'])[Math.floor(Math.random() * 3)];
   h.style.left = `${25 + Math.random() * 45}%`;
   hearts.appendChild(h);
   setTimeout(() => h.remove(), 1800);

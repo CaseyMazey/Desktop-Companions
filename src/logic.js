@@ -1,5 +1,5 @@
 // Reine Logik ohne Electron (wird in test/ geprueft): Daten pruefen, Erinnerungen faellig?, Nachbarn finden.
-const { APPS, SPECIES, NAMES, DEFAULT_SPECIES } = require('./presets');
+const { APPS, SPECIES, NAMES, DEFAULT_SPECIES, speciesName } = require('./presets');
 
 const KINDS = Object.keys(APPS);
 const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -32,6 +32,19 @@ function normalizeReminders(r, kind) {
 function createPet(kind = 'none', extra = {}) {
   if (!KINDS.includes(kind)) kind = 'none';
   return normalizePet({ id: newId(), kind, name: NAMES[kind], species: DEFAULT_SPECIES[kind], target: APPS[kind].target(), ...extra });
+}
+
+// Neues Pet aus der Auswahl "erst das Tier, dann die Verbindung": Name vom Tier, Rest vom Preset
+function createChosenPet(kind, species, name) {
+  if (!KINDS.includes(kind)) kind = 'none';
+  if (!SPECIES[species]) species = DEFAULT_SPECIES[kind];
+  return createPet(kind, { species, color: SPECIES[species].color, name: str(name, 24).trim() || speciesName(species) || NAMES[kind] });
+}
+
+// Welche Pets bekommen eine Meldung? Gezielt (pet) oder alle, die auf diese App hoeren (eigene Art oder listens)
+function petsForEvent(pets, ev) {
+  return pets.filter((p) => p.events && !p.hidden
+    && (ev.pet ? p.id === ev.pet : p.kind === ev.app || (APPS[p.kind].listens || []).includes(ev.app)));
 }
 
 function normalizePet(p) {
@@ -200,4 +213,4 @@ function chatterDelay(level, rand = Math.random) {
   return (r[0] + rand() * (r[1] - r[0])) * 60000;
 }
 
-module.exports = { createPet, normalizePet, normalizeState, dueReminder, inActiveWindow, pickMessage, neighborPairs, neighborGroups, strollTarget, HOME_RADIUS, chatterDelay, overlaps, freeSpot, KINDS };
+module.exports = { createPet, createChosenPet, petsForEvent, normalizePet, normalizeState, dueReminder, inActiveWindow, pickMessage, neighborPairs, neighborGroups, strollTarget, HOME_RADIUS, chatterDelay, overlaps, freeSpot, KINDS };
