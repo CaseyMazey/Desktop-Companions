@@ -302,4 +302,10 @@ function chatterDelay(level, rand = Math.random) {
   return (r[0] + rand() * (r[1] - r[0])) * 60000;
 }
 
-module.exports = { exportFile, importFile, petToExport, userIsBack, normalizeShared, dueShared, takePresetTimed, createPet, createChosenPet, petsForEvent, normalizePet, normalizeState, dueReminder, inActiveWindow, pickMessage, neighborPairs, neighborGroups, strollTarget, HOME_RADIUS, chatterDelay, overlaps, freeSpot, KINDS };
+// Kennung der Monitor-Anordnung: nur wenn sich Groesse, Lage, Skalierung, Drehung oder die Anzahl der Monitore
+// aendert, muessen die Pet-Fenster neu gebaut werden. Eine andere Arbeitsflaeche (Taskleiste) zaehlt nicht.
+function displayKey(displays) {
+  return (displays || []).map((d) => [d.id, d.bounds.x, d.bounds.y, d.bounds.width, d.bounds.height, d.scaleFactor, d.rotation || 0].join(':')).sort().join('|');
+}
+
+module.exports = { displayKey, exportFile, importFile, petToExport, userIsBack, normalizeShared, dueShared, takePresetTimed, createPet, createChosenPet, petsForEvent, normalizePet, normalizeState, dueReminder, inActiveWindow, pickMessage, neighborPairs, neighborGroups, strollTarget, HOME_RADIUS, chatterDelay, overlaps, freeSpot, KINDS };

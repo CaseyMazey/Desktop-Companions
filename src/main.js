@@ -6,7 +6,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const http = require('node:http');
 const { APPS, SPECIES, BEAU, GROUPS } = require('./presets');
-const { exportFile, importFile, userIsBack, dueShared, takePresetTimed, createPet, createChosenPet, petsForEvent, normalizePet, normalizeState, dueReminder, pickMessage, neighborGroups, strollTarget, chatterDelay, freeSpot, KINDS } = require('./logic');
+const { displayKey, exportFile, importFile, userIsBack, dueShared, takePresetTimed, createPet, createChosenPet, petsForEvent, normalizePet, normalizeState, dueReminder, pickMessage, neighborGroups, strollTarget, chatterDelay, freeSpot, KINDS } = require('./logic');
 const { pickScene, pettedLine } = require('./dialogues');
 const { startBridge, PORT } = require('./bridge');
 const { settingsFile, hookJson, hasHook, installHook } = require('./claudehook');
@@ -41,6 +41,22 @@ const live = new Map();                         // id -> { win, mem, busyUntil, 
 const groupNext = new Map();                    // Gruppe ("idA|idB|…") -> Zeitpunkt der naechsten Szene
 const recentScenes = [];
 const log = (...a) => console.log(...a);
+// Sicherheitsnetz: ein unerwarteter Fehler soll nie eine Flut von Fehlerfenstern ausloesen, sondern nur ins Protokoll
+// (error.log im Datenordner, wird bei 200 KB neu angefangen).
+let errorCount = 0;
+function logError(kind, err) {
+  errorCount++;
+  const line = `[${new Date().toISOString()}] ${kind}: ${(err && err.stack) || err}
+`;
+  console.error(line);
+  try {
+    const f = path.join(app.getPath('userData'), 'error.log');
+    if (fs.existsSync(f) && fs.statSync(f).size > 200 * 1024) fs.writeFileSync(f, '');
+    fs.appendFileSync(f, line);
+  } catch { /* Protokoll ist nur ein Extra */ }
+}
+process.on('uncaughtException', (err) => logError('Fehler', err));
+process.on('unhandledRejection', (err) => logError('Promise', err));
 
 // ---------- Speichern ----------
 const file = () => path.join(app.getPath('userData'), 'pets.json');
@@ -103,11 +119,13 @@ function createPetWindow(pet) {
   if (CLICK_THROUGH) win.setIgnoreMouseEvents(true, { forward: true });
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   win.loadFile(path.join(__dirname, 'pet', 'pet.html'), { query: { id: pet.id } });
-  win.webContents.on('did-finish-load', () => { const p = petById(pet.id); if (p) win.webContents.send('pet:update', publicPet(p)); });
+  // Fenster kann beim Neuaufbau schon wieder zu sein, bevor es fertig geladen hat
+  const wc = win.webContents;
+  wc.on('did-finish-load', () => { const p = petById(pet.id); if (p && !win.isDestroyed() && !wc.isDestroyed()) wc.send('pet:update', publicPet(p)); });
   // bei Skalierung (125 %, 150 %) legt Windows das Fenster schon ein paar Pixel zu gross an: einmal richtig setzen
   win.once('ready-to-show', () => { placeWin(pet.id, pet.x, pet.y); if (!allHidden() && !pet.hidden && !hiddenByFullscreen(pet.id)) win.showInactive(); });
-  win.webContents.on('will-navigate', (e) => e.preventDefault());
-  win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  wc.on('will-navigate', (e) => e.preventDefault());
+  wc.setWindowOpenHandler(() => ({ action: 'deny' }));
   const entry = { win, mem: {}, busyUntil: 0, dragging: null, walking: null, inTalk: false, petting: false, pettedAt: 0, pos: { x: pet.x, y: pet.y }, capturing: false };
   live.set(pet.id, entry);
   win.on('closed', () => { if (live.get(pet.id) === entry) live.delete(pet.id); });
@@ -1231,12 +1249,32 @@ function toggleHidden() {
 // Nach dem Ab- oder Anstecken eines Monitors (oder anderer Skalierung) verschiebt Windows die Fenster selbst und
 // rechnet sie um; danach lassen durchsichtige Fenster Klicks oft nicht mehr richtig durch. Deshalb: kurz warten,
 // bis Windows fertig ist, dann jedes Pet auf einen vorhandenen Bildschirm setzen und sein Fenster neu bauen.
+// Windows meldet Monitor-Aenderungen manchmal staendig (z. B. Taskleiste, Energiesparen). Neu gebaut wird nur, wenn
+// sich die Monitore wirklich geaendert haben, und hoechstens alle 5 s – sonst nur die Pets zurueck auf den Bildschirm.
 let rebuildTimer = null;
+let lastDisplays = '';
+let lastRebuildAt = 0;
 function scheduleRebuild() {
   clearTimeout(rebuildTimer);
-  rebuildTimer = setTimeout(rebuildAll, 800);
+  const wait = Math.max(800, lastRebuildAt + 5000 - Date.now());
+  rebuildTimer = setTimeout(onDisplaysChanged, wait);
+}
+function onDisplaysChanged() {
+  const key = displayKey(screen.getAllDisplays());
+  if (key === lastDisplays) { keepPetsOnScreen(); return; }
+  lastDisplays = key;
+  rebuildAll();
+}
+function keepPetsOnScreen() {
+  for (const pet of state.pets) {
+    const e = live.get(pet.id);
+    if (!e || e.win.isDestroyed() || e.dragging) continue;
+    const c = clampToScreen(pet, e.pos.x, e.pos.y);
+    if (c.x !== e.pos.x || c.y !== e.pos.y) { Object.assign(pet, c); placeWin(pet.id, c.x, c.y); }
+  }
 }
 function rebuildAll() {
+  lastRebuildAt = Date.now();
   for (const pet of state.pets) {
     const e = live.get(pet.id);
     if (e) {
@@ -1290,6 +1328,7 @@ app.whenReady().then(() => {
     state.settings.firstRun = false;
     save();
   }
+  lastDisplays = displayKey(screen.getAllDisplays());
   for (const pet of state.pets) createPetWindow(pet);
   if (!SMOKE) setTimeout(() => state.pets.forEach((p) => makeRoom(p)), 1500);
   // Beau begruesst dich beim Start und hebt die Pfote (Wunsch aus dem Beau-Theme)
@@ -1374,7 +1413,11 @@ async function runSmoke() {
   report.szene = recentScenes[recentScenes.length - 1];
   await shot('2c-gruppe');
   // Monitorwechsel nachstellen: alle Fenster neu aufbauen, Groesse und Position muessen stimmen
-  rebuildAll();
+  // Fenster mitten im Laden wieder zerstoeren (so kam die Fehlerflut zustande) – darf keinen Fehler werfen
+  const errBefore = errorCount;
+  for (let i = 0; i < 25; i++) { rebuildAll(); await sleep(20 + (i * 37) % 300); }
+  await sleep(1500);
+  report.neuaufbauFehler = errorCount - errBefore;
   await sleep(1500);
   report.neuaufbau = [...live].map(([id, e]) => { const b = e.win.getBounds(); return `${b.width}x${b.height}@${b.x},${b.y}=${e.pos.x},${e.pos.y}`; });
   // Begleiter-Modus und Huhus Quiz: Eule mit Nook, Drache ohne App, Buh erschreckt seinen Nachbarn

@@ -48,3 +48,13 @@ test('Neues Pet bringt seine Uhrzeiten in die gemeinsamen mit', () => {
   assert.equal(dan.reminders.timed.length, 0);
   assert.deepEqual(st.settings.timed.map((t) => [t.time, t.pet]), [['15:45', dan.id]]);
 });
+
+test('Monitor-Kennung: nur echte Aenderungen fuehren zum Neuaufbau der Pet-Fenster', () => {
+  const { displayKey } = require('../src/logic');
+  const a = { id: 1, bounds: { x: 0, y: 0, width: 1920, height: 1080 }, workArea: { x: 0, y: 0, width: 1920, height: 1040 }, scaleFactor: 1, rotation: 0 };
+  const b = { id: 2, bounds: { x: 1920, y: 0, width: 1080, height: 1920 }, scaleFactor: 1.25, rotation: 90 };
+  assert.equal(displayKey([a, b]), displayKey([b, a]), 'Reihenfolge egal');
+  assert.equal(displayKey([a]), displayKey([{ ...a, workArea: { x: 0, y: 0, width: 1920, height: 1080 } }]), 'Taskleiste zählt nicht');
+  assert.notEqual(displayKey([a]), displayKey([{ ...a, scaleFactor: 1.5 }]), 'Skalierung zählt');
+  assert.notEqual(displayKey([a]), displayKey([a, b]), 'neuer Monitor zählt');
+});
